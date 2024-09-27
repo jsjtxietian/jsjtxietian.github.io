@@ -1,7 +1,11 @@
 ---
-title: 给Godot布道
+title: 分享：开源游戏引擎Godot
+tags:
+  - Presentation
+  - GameDev
+date: 2024-05-16
 ---
 
-今年5月给公司做的关于开源游戏引擎 [Godot](https://github.com/godotengine/godot) 的分享
+给公司做的关于开源游戏引擎 [Godot](https://github.com/godotengine/godot) 的分享
 
 {% pdf /Assets/Godot.pdf %}

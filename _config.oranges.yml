@@ -135,7 +135,14 @@ friends:
     nickname: Linda
     site: https://lindadaism.com/
     meta:
-
+  -
+    nickname: Xiangming Ka
+    site: https://xiangmingka.wixsite.com/website
+    meta:
+  -
+    nickname: Tracy Que
+    site: https://yunyaoque.com/
+    meta:
 # 页脚信息
 footer:
   # social: 社交方式
@@ -213,7 +220,7 @@ footer:
 # 文章搜索
 search:
   enable: true
-  placeholder: 
+  placeholder: Search...
 
 # 深/浅配色切换
 colorSwitch:

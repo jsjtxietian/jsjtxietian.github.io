@@ -1,5 +1,7 @@
 ---
 title: tags
-date: 2024-09-12 16:45:34
-path: /tags/
+date: 2019-05-03 12:03:35
+type: "tags"
+categories:
+tags:
 ---
