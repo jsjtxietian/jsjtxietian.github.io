@@ -7,9 +7,9 @@ date: 2024-08-19
 
 
 
-### CPU Microarchitecture
+## CPU Microarchitecture
 
-图来自[^2]
+图来自[Kaby Lake - Microarchitectures - Intel - WikiChip](https://en.wikichip.org/wiki/intel/microarchitectures/kaby_lake)
 
 ![ ](../Assets/perf_single_core/skylake_block_diagram.svg)
 
@@ -19,13 +19,20 @@ The CPU **Back-End** employs an Out-Of-Order engine that executes instructions a
 
 The Reservation Station/Scheduler (RS) is the structure that tracks the availability of all resources for a given UOP and dispatches the UOP to the assigned port once it is ready. The core is 8-way superscalar. Thus the RS can dispatch up to 8 UOPs per cycle. 
 
+### 大小核
+
+大小核检测：["Cutting Edge Chipset" Scheduling](https://sherief.fyi/post/cutting-edge-chipset-scheduling/) ，TBB之类的库也有代码可以参考
+
+一些分析：
+
+* [从E-core/P-core的stream性能差异开始 - 知乎](https://zhuanlan.zhihu.com/p/689705368)
+* [再讲一个p-core和e-core的不同 - 知乎](https://zhuanlan.zhihu.com/p/714172034)
 
 
-#### PMU
 
-硬件基础
+### PMU
 
-Most modern PMUs have a set of Performance Monitoring Counters (PMC) that can be used to collect various performance events that happen during the execution of a program.
+硬件基础：Most modern PMUs have a set of Performance Monitoring Counters (PMC) that can be used to collect various performance events that happen during the execution of a program.
 
 ![image-20241017184141468](./../Assets/perf_single_core/image-20241017184141468.png)
 
@@ -33,15 +40,17 @@ Most modern PMUs have a set of Performance Monitoring Counters (PMC) that can be
 
 
 
-### TMAM方法论
+## 方法
 
-The concept behind TMA’s top-level breakdown[^3]：
+### TMAM
+
+The concept behind TMA’s top-level breakdown[^1]：
 
 If uop for instruction was not allocated during a particular cycle of execution, it could be for two reasons: we were not able to fetch and decode it (Front End Bound), or Back End was overloaded with work and resources for new uop could not be allocated (Back End Bound). Uop that was allocated and scheduled for execution but not retired is related to the Bad Speculation bucket.
 
-<img src="/../Assets/perf_single_core/image-20241017181846901.png" alt="image-20241017181846901" style="zoom:67%;" />
+![image-20241017181902586](../Assets/perf_single_core/image-20241017181846901.png)
 
-The TMA hierarchy of performance bottlenecks[^3]：
+The TMA hierarchy of performance bottlenecks[^1]：
 
 ![image-20241017181902586](../Assets/perf_single_core/image-20241017181902586.png)
 
@@ -51,9 +60,32 @@ Analysis tools such as Intel VTune Profiler, AMD uprof, and Linux perf can calcu
 
 
 
-### 换一个视角
+### Roofline
 
-主要资料来自[^1]。
+throughput-oriented performance model：The “roofline” in this model expresses the fact that the performance of an application cannot exceed the machine’s capabilities. Every function and every loop in a program is limited by either compute or memory capacity of a machine.
+
+In summary, the Roofline Performance Model can be helpful to:
+
+* Identify performance bottlenecks.
+* Guide software optimizations.
+* Determine when we’re done optimizing.
+* Assess performance relative to machine capabilities.
+
+![Frame 480](./../Assets/perf_single_core/Frame 480.png)
+
+
+
+图来自：[Identify Performance Bottlenecks Using CPU Roofline](https://www.intel.com/content/www/us/en/docs/advisor/get-started-guide/2023-1/identify-bottlenecks-using-cpu-roofline.html#GUID-7CEF87D7-E2C1-4BA8-9D50-9647785B063D)
+
+![GUID-B6A41ED2-A53C-415C-9FA8-BD37BF477AEE-low](./../Assets/perf_single_core/GUID-B6A41ED2-A53C-415C-9FA8-BD37BF477AEE-low.png)
+
+
+
+
+
+### Mental Model：Four Cornerstones of CPU Performance
+
+主要资料来自[Four Cornerstones of CPU Performance. | Easyperf](https://easyperf.net/blog/2022/10/17/Four-Cornerstones-of-CPU-Performance)。
 
 #### Predictability of Code
 
@@ -85,11 +117,33 @@ How well a CPU can process a long sequence of instructions, where each of them d
 
 
 
+Top-Down microarchitecture analysis and Roofline performance analysis should usually be a good way to start. Most of the time you’ll see a mix of problems, so you have to analyze hotspots case by case. Figuring out predictability of code or data is relatively easy (you check Top-Down metrics) while distinguishing if your code is limited by throughput or latency is not.
 
+
+
+## 例子
 
 ### Memory Bound 
 
+* Cache-Friendly Data Structures
 
+  - Access data sequentially
+
+  - Packing the data
+
+  - Aligning and padding
+
+  - Dynamic memory allocation: jemalloc, arena...
+
+  - Tune the code for memory hierarchy: loop blocking (tiling), cache-oblivious algorithms...
+
+* Explicit Memory Prefetching: `__builtin_prefetch`
+
+* Optimizing For DTLB: Huge page
+  * 除了数据以外，代码也可以：[Performance Benefits of Using Huge Pages for Code. | Easyperf](https://easyperf.net/blog/2022/09/01/Utilizing-Huge-Pages-For-Code)
+
+
+[Michael Williams on X: "@BenjDicken You could add these (credit to Brendan Gregg). I love this idea of scaling to relatable units. https://t.co/rJt9Lncl1M" / X](https://x.com/ptoboley/status/1847370345302593930)
 
 #### loop interchange: 88%
 
@@ -120,11 +174,25 @@ void multiply(Matrix &result, const Matrix &a, const Matrix &b) {
 
 #### huge page 56%
 
-
+[Performance Challenge #6 - Google 幻灯片](https://docs.google.com/presentation/d/16M90It8nOK-Oiy7j9Kw27o9boLFwr6GFy55XFVzaAVA/edit#slide=id.gf46e3bea08_0_131)
 
 
 
 ### Core Bound
+
+* inlining Functions
+
+* Loop Optimizations
+
+  - Loop Invariant Code Motion, Loop Unrolling, Loop Strength Reduction, and Loop Unswitching
+
+  - Loop Interchange, Loop Blocking (Tiling), and Loop Fusion and Distribution (Fission)
+
+* Vectorization
+  * clang：`-Rpass-analysis=loop-vectorize -Rpass=loop-vectorize -Rpass-missed=loop-vectorize`
+  * 可以看下mwish的系列文章：[SIMD Extensions and AVX](https://blog.mwish.me/2024/03/24/SIMD-Extensions-and-AVX/)
+  * [Vectorization part7. Tips for writing vectorizable code. | Easyperf](https://easyperf.net/blog/2017/11/10/Tips_for_writing_vectorizable_code)
+
 
 #### compiler intrinsics 75%
 
@@ -247,6 +315,9 @@ void randomParticleMotion(std::vector<Particle> &particles, uint32_t seed) {
 
 
 ### Bad Speculation
+
+* lookup table
+* predication
 
 #### vtable => -0.80 , 0.98 if get rid of all virtual and use pod
 
@@ -373,15 +444,27 @@ branchless:-0.93
 
 ### Frontend Bound
 
-FE没法即使把指令送去BE，所以Back-End在空等Front-End送来指令。
+[Machine code layout optimizations. | Easyperf](https://easyperf.net/blog/2019/03/27/Machine-code-layout-optimizatoins)
 
-caches utilization and inability to fetch instructions from memory
+* Basic block placement：maintain fall through between hot pieces of the code. Not taken branches are fundamentally cheaper that taken. Additionally second case better utilizes L1 I-cache and uop-cache (DSB)
+  * 冷热分离，`__builtin_expect`
+  * [Improving performance by better code locality. | Easyperf](https://easyperf.net/blog/2018/07/09/Improving-performance-by-better-code-locality)
+  * BOLT [Accelerate large-scale applications with BOLT - Engineering at Meta](https://engineering.fb.com/2018/06/19/data-infrastructure/accelerate-large-scale-applications-with-bolt/)
+* Basic block alignment：shift the hot code  down using NOPs so that the whole loop will reside in one cache line
+  * [Code alignment issues. | Easyperf](https://easyperf.net/blog/2018/01/18/Code_alignment_issues)
+  * [Code alignment options in llvm. | Easyperf](https://easyperf.net/blog/2018/01/25/Code_alignment_options_in_llvm)
+* Function splitting：next hot instruction will reside in the same cache line. This improves utilization of CPU Front-End data structures like I-cache and DSB-cache.
+* Function grouping：place hot functions together such that they touch each other in the same cache line.
+  * In gold linker it can be done using [–section-ordering-file](https://manpages.debian.org/unstable/binutils/x86_64-linux-gnu-ld.gold.1.en.html) option.  [hhvm/hphp/tools/hfsort at master · facebook/hhvm](https://github.com/facebook/hhvm/tree/master/hphp/tools/hfsort)
+* PGO
 
 
 
 ### Other
 
 ##### IO
+
+Linux storage I/O interfaces：POSIX，libaio，io_uring，SPDK
 
 mmap
 
@@ -401,13 +484,12 @@ LTO，PGO
 
 
 
-### 总结
+## 总结
+
+
+
+
 
 欢迎提issue交流：[Issues · jsjtxietian/jsjtxietian.github.io](https://github.com/jsjtxietian/jsjtxietian.github.io/issues)
 
-
-
-[^1]: [Four Cornerstones of CPU Performance. | Easyperf](https://easyperf.net/blog/2022/10/17/Four-Cornerstones-of-CPU-Performance)
-[^2]:[Kaby Lake - Microarchitectures - Intel - WikiChip](https://en.wikichip.org/wiki/intel/microarchitectures/kaby_lake)
-
-[^3]: Ahmad Yasin. A top-down method for performance analysis and counters architecture. pages 35–44, 03 2014. ISBN 978-1-4799-3606-9. doi: 10.1109/ISPASS.2014.6844459.
+[^1]: Ahmad Yasin. A top-down method for performance analysis and counters architecture. pages 35–44, 03 2014. ISBN 978-1-4799-3606-9. doi: 10.1109/ISPASS.2014.6844459.
