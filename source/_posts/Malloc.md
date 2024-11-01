@@ -16,7 +16,13 @@ Mimalloc之前做过分享，可以看看：[分享：Mimalloc Paper | 谢天的
 
 
 
+------
+
+
+
 ### Arena
+
+https://www.youtube.com/watch?v=nZNd5FjSquk&t=2322s
 
 #### Stack Allocator
 
@@ -75,17 +81,38 @@ void ArenaClear(Arena *arena);
 ComplexStructure *MakeComplexStructure(Arena *arena);
 ```
 
-当然这也可以理解成是一种“依赖注入”，通过强制传入arena参数，caller就决定了接下来的分配的内存的lifetime（所谓的 grouping lifetimes together）。这种侵入性其实是一种表达，arena其实代表了一种程序员选择的lifetime参数，这就和Rust那种需要静态确定lifetime的方法产生了区别。不仅仅可以按照lifetime来分，也可以利用arena来表达数据的冷热程度，来完成数据的冷热分离。另外也可以利用thread local的空间来做每个thread自己的arena，这样可以减少同步开销。
+当然这也可以理解成是一种“依赖注入”，通过强制传入arena参数，caller就决定了接下来的分配的内存的lifetime（所谓的 grouping lifetimes together）。这种侵入性其实是一种表达，arena其实代表了一种程序员选择的lifetime参数，这就和Rust那种需要静态确定lifetime的方法产生了区别。此时，Releasing memory is a per-lifetime concern, not a per-allocation concern，(99% of code can now allocate & forget, by picking an arena—a named "null garbage collector")[^13]
 
 这让我想到了Casy在Handmade hero中曾经表达过的程序员的mental development[^8]，第n层是所谓的individual element thinking，主要是 “RAII，thousands or millions of new/delete or malloc/free，ownership is a constant concern / mental overhead”；第n+1层则是grouped element thinking，包括“large collections created/destroyed at the same time，very very few new/delete or malloc/free，heavy use of scratch space，hashes and reuse，ownership is obvious and trivial in 99% of cases”。这也许和Casey主要是做游戏有关，确实在游戏中，如果出现了一个object，那未来可能就会有很多个。我倒是觉得对正确的问题使用正确的工具，RAII也可以和arena结合起来用，arena改改也可以传给C++ pmr的那些容器。
 
+#### Extension
+
 当然在实践中，arena allocator本身的机制肯定是不够撑起多变的需求的。比如在游戏中，如果我分配了1000个entity，需要释放中间的某一个该怎么办。就这个问题而言，解决方案可以是在arena里再加一个freelist的机制，在释放时候也将其加入freelist，分配时优先从freelist分配，从而解决这个memory reuse的问题。更进一步说，可以用arena当成一个基础组件来构建成更“高级”的一些分配器。
 
+不仅仅可以按照lifetime来分，也可以利用arena来表达数据的冷热程度，来完成数据的冷热分离。另外也可以利用thread local的空间来做每个thread自己的arena，这样可以减少同步开销。Diagnostics, logging, visualization for all allocations can be implemented in a single, simple layer—easily controlled by you (Allocations are already bucketed to a unique ID - the arena pointer itself) [^13]
+
+也需要注意Arena alising问题，两个arena可能实际是同一个。除了使用多个Arena以外，可以考虑`memory poisoning`，查问题方便很多。
+
+```C
+void *FunctionA(Arena *arena)
+{
+  ArenaTemp scratch = GetScratch();
+  void *result = PushArrayZero(arena, U8, 1024);
+  // fill result...
+  ReleaseScratch(scratch);
+  return result;
+}
+
+void FunctionB(void)
+{
+  ArenaTemp scratch = GetScratch();
+  void *result = FunctionA(scratch.arena);
+  // use result
+  ReleaseScratch(scratch);
+}
+```
+
 另一个问题是arena的扩容问题，解决方案也可以有很多，比如可以把arena用链表链起来。也可以直接使用一个很优雅的virtual memory trick——用类似`VirtualAlloc`的接口reserve一块巨大的地址空间，然后按需commit page。
-
-Arena allocator有许多实现可以参考，纯粹的C实现例如[^5][^12]，dynamic array[^9]、hashmap[^10]这种数据结构也有对应的文章可以参考。RAD Debugger就是基于arena构建起来的[^6]，protobuf也在特定场景推荐使用arena[^7]。
-
-
 
 #### Generational Arena
 
@@ -94,6 +121,14 @@ Generational Arena在游戏中的使用场景比较典型。而且除了内存�
 Generational Pool的handle本身其实就是一个32bit的值，前16bit用来索引数据数组，后16bit表达generation信息（数据多的话handle也可以是64bit）。Pool本身会有一个getter的API，传入handle后会进行检查，如果generation值一致则返回实际的数据，不然返回null，就像是weak ref一样。
 
 另外，Rust做游戏似乎尤其需要这个 [LogLog Games](https://loglog.games/blog/leaving-rust-gamedev/#ecs-solves-the-wrong-kind-problem)
+
+
+
+Arena allocator有许多实现可以参考，纯粹的C实现例如[^5][^12]，dynamic array[^9]、hashmap[^10]这种数据结构也有对应的文章可以参考。RAD Debugger就是基于arena构建起来的[^6]，protobuf也在特定场景推荐使用arena[^7]。
+
+
+
+------
 
 
 
@@ -113,11 +148,11 @@ Generational Pool的handle本身其实就是一个32bit的值，前16bit用来�
 
 也许其实不分配内存是最好的，每个分配至少占用32byte（分配本身[^11] + 指针的8byte），<=64byte就没必要分配了。
 
-有GC真好。
+
+
+
 
 欢迎提issue交流：[Issues · jsjtxietian/jsjtxietian.github.io](https://github.com/jsjtxietian/jsjtxietian.github.io/issues)
-
-
 
 
 
@@ -136,3 +171,4 @@ Generational Pool的handle本身其实就是一个32bit的值，前16bit用来�
 [^10]: [An easy-to-implement, arena-friendly hash map (nullprogram.com)](https://nullprogram.com/blog/2023/09/30/)
 [^11]:[How much memory does a call to ‘malloc’ allocate? – Daniel Lemire's blog](https://lemire.me/blog/2024/06/27/how-much-memory-does-a-call-to-malloc-allocates/)s
 [^12]:[bitwise/ion/common.c at master · pervognsen/bitwise (github.com)](https://github.com/pervognsen/bitwise/blob/master/ion/common.c#L172-L209)
+[^13]:[Enter The Arena: Simplifying Memory Management (2023)](https://www.youtube.com/watch?v=TZ5a3gCCZYo)
