@@ -228,7 +228,7 @@ colorSwitch:
 
 # 文章分享
 postShare:
-  enable: true
+  enable: false
 
   twitter:
     enable: true
