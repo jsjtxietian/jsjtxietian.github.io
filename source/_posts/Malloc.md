@@ -81,9 +81,11 @@ void ArenaClear(Arena *arena);
 ComplexStructure *MakeComplexStructure(Arena *arena);
 ```
 
-当然这也可以理解成是一种“依赖注入”，通过强制传入arena参数，caller就决定了接下来的分配的内存的lifetime（所谓的 grouping lifetimes together）。这种侵入性其实是一种表达，arena其实代表了一种程序员选择的lifetime参数，这就和Rust那种需要静态确定lifetime的方法产生了区别。此时，Releasing memory is a per-lifetime concern, not a per-allocation concern，(99% of code can now allocate & forget, by picking an arena—a named "null garbage collector")[^13]
+当然这也可以理解成是一种“依赖注入”，通过强制传入arena参数，caller就决定了接下来的分配的内存的lifetime（所谓的 grouping lifetimes together）。这种侵入性其实是一种表达，arena其实代表了一种程序员选择的lifetime参数，这就和Rust那种需要静态确定lifetime的方法产生了区别。此时，Releasing memory is a per-lifetime concern, not a per-allocation concern，(99% of code can now allocate & forget, by picking an arena—a named "null garbage collector")[^13]。
 
-这让我想到了Casy在Handmade hero中曾经表达过的程序员的mental development[^8]，第n层是所谓的individual element thinking，主要是 “RAII，thousands or millions of new/delete or malloc/free，ownership is a constant concern / mental overhead”；第n+1层则是grouped element thinking，包括“large collections created/destroyed at the same time，very very few new/delete or malloc/free，heavy use of scratch space，hashes and reuse，ownership is obvious and trivial in 99% of cases”。这也许和Casey主要是做游戏有关，确实在游戏中，如果出现了一个object，那未来可能就会有很多个。我倒是觉得对正确的问题使用正确的工具，RAII也可以和arena结合起来用，arena改改也可以传给C++ pmr的那些容器。
+现代的内存分配器提供的malloc接口毕竟没有这样的信息，它们只能假设分配时间邻近、大小相似的内存块也更容易被同时使用，因此会将其尽量放置靠近一些；arena则直接利用程序员传递的信息来将相同lifetime的内存以bump的形式分配，从性能角度来说也会更好，因为相同lifetime的内存大概率也会被使用。
+
+Casy在Handmade hero中曾经表达过的程序员的mental development[^8]，第n层是所谓的individual element thinking，主要是 “RAII，thousands or millions of new/delete or malloc/free，ownership is a constant concern / mental overhead”；第n+1层则是grouped element thinking，包括“large collections created/destroyed at the same time，very very few new/delete or malloc/free，heavy use of scratch space，hashes and reuse，ownership is obvious and trivial in 99% of cases”。这也许和Casey主要是做游戏有关，确实在游戏中，如果出现了一个object，那未来可能就会有很多个。我倒是觉得对正确的问题使用正确的工具，RAII也可以和arena结合起来用，arena改改也可以传给C++ pmr的那些容器。
 
 #### Extension
 
