@@ -1,5 +1,5 @@
 ---
-title: 游戏性能优化管线(施工中)
+title: 游戏性能优化管线
 tags:
   - GameDev
   - Performance
@@ -10,7 +10,7 @@ date: 2024-10-17
 
 ## 游戏优化的特点
 
-* 游戏优化讲究的是在一帧的时间内，很快地完成1000件不同的事情。游戏性能最直观的标准是帧率，每帧时间越短，帧率自然越高。但是帧率本身是分层的目标：30帧，60帧，120帧等等。举个例子，如果frame pacing没处理好的话，不稳定的40帧的给玩家带来的体验是不如稳定的30帧的。
+* 游戏作为软实时软件，优化讲究的是在一帧的时间内，很快地完成1000件不同的事情。游戏性能最直观的标准是帧率，每帧时间越短，帧率自然越高。但是帧率本身是分层的目标：30帧，60帧，120帧等等。举个例子，如果frame pacing没处理好的话，不稳定的40帧的给玩家带来的体验是不如稳定的30帧的。
 * 游戏本身的子系统相当多，但是Everything has a budget, and you need to keep to it so the game is playable. 卡顿非常影响体验，所以需要为最坏情况打算。
 * 每个子系统的逻辑都有区别，很难有一招鲜吃遍天的情况，GPU相关的优化所需要的手段和CPU的就完全不同，都需要具体分析。
 * 游戏项目一般时间紧迫，很多时候只能抓大放小，定位瓶颈然后制定计划优化。要考虑投入产出比，优化的风险（是否可热更）。优化是权衡的艺术，砍美术资源当然是最快的优化方案，但是会让美术、策划不高兴。
@@ -18,6 +18,10 @@ date: 2024-10-17
 
 
 ## 流程与工具
+
+把复杂的事情简单化，简单的事情标准化，标准的事情流程化，流程的事情自动化。
+
+比较切实的建议可以参考：[游戏性能优化全流程建设(Unity) - 知乎](https://zhuanlan.zhihu.com/p/692168575)
 
 ### 规范
 
@@ -31,6 +35,7 @@ date: 2024-10-17
 
 * 定时自动性能测试（自动跑图、Replay等）并记录数据，发现明显的性能regression自动报警。
   * 进阶：可以有自动化的归因，例如发现了FPS的regression，可以自动diff出耗时变长的模块；发现内存变多，可以自动抓快照对比出变多的内存条目；启动/加载时间变长，自动对比分析出变长的原因。
+  * 可以参考meta的工作，找subroutines的regression比较容易：[FBDetect: Catching Tiny Performance Regressions at Hyperscale through In-Production Monitoring](https://tangchq74.github.io/FBDetect-SOSP24.pdf)
 * 定时资源轮播、对比：在目标机型上加载所有的资源，可以记录加载资源的耗时、内存等；可以进行不同版本之间的比较，资源数量的控制。
 
 
@@ -44,62 +49,80 @@ date: 2024-10-17
 
 
 
-## 动态分析
+## 动态分析——可观测性
 
-可观测性
+我一直在思考能不能把Linux的动态追踪技术（[动态追踪技术漫谈 - OpenResty 官方博客](https://blog.openresty.com.cn/cn/dynamic-tracing/)）用到游戏引擎里。动态追踪技术通常是基于操作系统内核来实现的，对于游戏来说，游戏引擎就是其操作系统，那是不是可以基于游戏引擎实现一套类似的机制。
 
-我一直在思考能不能把Linux的动态追踪技术（[动态追踪技术漫谈 - OpenResty 官方博客](https://blog.openresty.com.cn/cn/dynamic-tracing/)）用到游戏引擎里。
+### 关于方法的思考
 
-动态追踪技术通常是基于操作系统内核来实现的。=> 基于游戏引擎实现
+如果我现在发现游戏某个已经Ship的版本有性能问题，我可能有以下的解决方案：
 
-这种加日志和埋点的方式对于在线调试是不切合实际的，关于这一点，前面已经充分地讨论了。而另一方面，传统的性能分析工具，像 Perl 的 DProf、C 世界里的 gprof、以及其他语言和环境的性能分析器（profiler），往往需要用特殊的选项重新编译程序，或者以特殊的方式重新运行程序。这种需要特别处理和配合的性能分析工具，显然并不适用在线的实时活体分析。
+* 依靠在游戏内的预先埋点所收集的信息来进行性能分析。但是埋点本身也存在问题，埋点多了会导致采集一些根本不需要的信息，从而造成不必要的采集和存储开销；埋点少了会导致缺乏关键信息，毕竟没人可以预知未来。
+* 出dev（development）版本的包，配合对应的性能分析工具，希望可以在dev版本上重现已经ship的版本的性能问题。但是，一来这可能就导致环境的丢失从而难以复现，二来一般development版本的包的性能损失会很可观，显然并不适合对于在线游戏的实时活体分析。
 
-我们会在软件系统的某一个层次，或者某几个层次上面，安置一些探针，然后我们会自己定义这些探针所关联的处理程序。 => 提前埋点
+那么参考动态追踪技术，对于游戏的活体分析而言：
 
-我们随时可以运行这个工具，随时进行采样，随时结束采样，而不用管目标系统的当前状态。自身的性能损耗极小，5%以内。即使是这么小的性能损耗也只发生在我们实际采样的那几十秒或者几分钟以内。
+* 目标：我希望能把整个游戏本身看成是一个可以直接查询的“数据库”，可以直接从这个“数据库”里安全快捷地得到我们想要的信息，而且绝不留痕迹，绝不去采集我们不需要的信息。可以随时进行采样，随时结束采样，而不用管目标系统的当前状态；保持自身的性能损耗极小，5%以内，而且即使是这么小的性能损耗也只发生在实际采样的那几十秒或者几分钟以内。
+* 手段：在从游戏gameplay层到引擎到操作系统的某一个层次，或者某几个层次上面，安置一些tracepoint（Linux原本是安置探针，然后允许自定义这些探针所关联的处理程序，可能对游戏而言有些overkill，但是已经有一些尝试：[Low-level native plug-in Profiler API](https://docs.unity3d.com/2022.3/Documentation/Manual/LowLevelNativePluginProfiler.html)）。
+* 方法：会把对最终问题的假设，分解成一系列的小假设，然后逐步求索，逐步验证，不断地调整方向和假设，以接近最终的问题。这样的优势在于，采样当中对系统产生的开销一直会相对较小，尽可能接近真实环境。有点类似TMAM法（[TMAM](https://jsjtxietian.github.io/2024/08/19/perf_single_core/#TMAM)），层层往下追，直到发现问题。往后也许可以考虑引入某种智能的自动化，自动使用系统性的方法，逐步缩小问题范围，直至定位问题根源，再报告给用户，并向用户建议优化或修复方法。
 
-埋点的方式主要存在两大问题，一个是“太多”的问题，一个是“太少”的问题。“太多”是指我们往往会采集一些根本不需要的信息，只是一时贪多贪全，从而造成不必要的采集和存储开销。那“太少”的问题是指，我们往往很难在一开始就规划好所需的所有信息采集点，毕竟没有人是先知，可以预知未来需要排查的问题。如把整个生产系统本身看成是一个可以直接查询的“数据库”，我们直接从这个“数据库”里安全快捷地得到我们想要的信息，而且绝不留痕迹，绝不去采集我们不需要的信息。
+游戏的层级：
 
-不同层面的火焰图常常会提供不同的视角，从而反映出不同层面上的代码热点。
-
-我们会把最终问题的假设，分解成一系列的小假设，然后逐步求索，逐步验证，不断确定会修正我们的方向，不断地调整我们的轨迹和我们的假设，以接近最终的问题。那么这些工具本身犯错的可能性就大大降低，在采样过程当中对生产系统产生的开销也会相对较小。通过知识库和推理引擎，可以自动化应用各种动态追踪方面的方法论，可以自动使用系统性的方法，逐步缩小问题范围，直至定位问题根源，再报告给用户，并向用户建议优化或修复方法。
-
-很像TMAM
-
-“鼓励工程师不断的深入学习的工具才是有前途的好工具”
-
-
-
-### CPU
+* 客户端层：一般的游戏都会有某种上报功能（如[Telemetry](https://www.gamedeveloper.com/design/game-telemetry-with-dna-tracking-on-assassin-s-creed)）来收集玩家的游玩相关的信息，这里提供的是在游戏的视角中，玩家在做什么的信息。
+  * 脚本层：如果游戏是重脚本的，也应该将其置于该层级序列中。
+* 引擎层：作为客户端的操作系统，这里是本节主要关注的地方。
+* OS层：其实是[Perfetto](https://perfetto.dev/docs/tracing-101)等工具的领域，提供线程调度、cpu频率等信息。
 
 
 
-### 加载与卸载
+### 关于实践的思考
 
+以简单的render流程为例，我现在设想的代码大概长这样：
 
+```c++
+bool tracepoint_enabled_render;
+bool tracepoint_enabled_render_cull;
+// ... other cull related stage bool
+bool tracepoint_enabled_render_opaque;
+bool tracepoint_enabled_render_transparent;
 
-### 卡顿
+// render
+{
+    if (unlikely(tracepoint_enabled_render)) {
+        trace_render(...);
+    }
 
+    // cull
+    if (unlikely(tracepoint_enabled_render && tracepoint_enabled_render_cull)) {
+        trace_cull(...);
+    }
 
+    // draw opaque
+    ......
+}
+```
 
-### 内存
+Linux kernel有[静态分支预测](https://www.zhihu.com/question/471637144/answer/3377224126)技术，可以消除掉如上加入的if相关的判断所带来的消耗，对于游戏引擎而言实现起来稍微有些困难。
 
+#### 需要记录的信息
 
+* 游戏各个子模块、各个阶段的耗时，一个比较好的起点是游戏引擎自带的marker（例如[Common Profiler markers](https://docs.unity3d.com/2022.3/Documentation/Manual/profiler-markers.html)）。除了耗时以外，systemcall、线程之间的通信、job system创建调度等信息也很有参考价值。
+* 影响性能的核心数据，也就是游戏各个子模块的关键指标的收集，一个比较好的起点是游戏引擎自带的profile window中的数据（例如 [ The Profiler window](https://docs.unity3d.com/2022.3/Documentation/Manual/ProfilerWindow.html)），这个不同项目差异可能比较大，可以按项目特点定制（Unity也有类似的定制机制：[Custom Profiler counters](https://docs.unity3d.com/2022.3/Documentation/Manual/Profiler-creating-custom-counters.html)）。
 
+#### 关于log的想法
 
+以记录某一个marker的某一帧的持续时间为例，marker本身可以用一个uint16表示；鉴于一帧的时间不会长到特别离谱，可以只记录整数位的微秒，一个uint16应该绰绰有余，因此一帧中一个marker所带来的时间数据只需要32位即可记录。关于资源的加载与卸载应该也可以依靠相同的思路处理，但这主要是要配合客户端本身的资源加载与卸载流程，如果可以的话尽量不要进行string的操作，用id替代。然后可以利用某种batch写入的机制写到环形buffer去（类似perfetto的asynchronous multiple-writer single-reader pipeline [Buffers and dataflow ](https://perfetto.dev/docs/concepts/buffers)），也许也可以带上某种程度的压缩，最后以某种方式呈现，可以是通过网络上报、画成info graphics或者打到本地log。
 
+关于内存的追踪则稍微麻烦些，固然可以在malloc和free的地方都埋点，也可以带上引擎内部也许本身就有的marker来标志本次申请的内存的用途。获取每次malloc的地址、大小、用途应该都是比较cheap的，真正耗时的在于获取malloc时候的堆栈，应该有不少文章讲如何快速获取当前的stacktrace，可以参考实现。
 
+#### 偶现卡顿的追查
 
-[Linux kernel中有哪些奇技淫巧？ - 知乎](https://www.zhihu.com/question/471637144/answer/3377224126)
+很多时候我们在意的并不是一局游戏内帧率的均值，而是突然的变化，也就是卡顿。取perfdog对于卡顿的定义：“下一帧耗时大于前三帧平均帧耗时2倍，则认为一次潜在卡顿。同时单帧耗时满足大于两倍电影帧耗时1000ms/24*2，则认为是一次真正卡顿。同时若单帧耗时大于3倍电影帧耗时，则认为是一次严重卡顿。”
 
+* 可以稳定复现的卡顿：一步步追踪耗时原因即可。
+* 偶现的卡顿：“守株待兔”，设一个阈值或其他筛选条件，坐等卡顿被捕获。筛选出那些耗时超过一定阈值的模块，然后针对这些模块，采集尽可能多的实际需要的细节信息。有针对性地进行采样分析，才能把损耗和开销降到最低点，避免无谓的资源浪费。
 
-
-[Tracing 101 - Perfetto Tracing Docs](https://perfetto.dev/docs/tracing-101)
-
-结合游戏遥测技术：
-
-* [Game Telemetry with DNA Tracking on Assassin's Creed](https://www.gamedeveloper.com/design/game-telemetry-with-dna-tracking-on-assassin-s-creed)
-* [Kafka Streams API for game data analysis | Red Hat Developer](https://developers.redhat.com/articles/2021/08/24/game-telemetry-kafka-streams-and-quarkus-part-1#)
+对于偶现的卡顿而言，当然这要求尽可能多的开启tracepoint，因为当知道这一帧有卡顿的时候，往往已经是帧末尾。但实际上非异常数据并不需要落盘，所以性能开销依然是在可接受的范围内。当然性能允许的范围内有截图等应用层的信息更好，更加方便从应用层猜测发生了什么。
 
 
 
@@ -349,13 +372,6 @@ Build管线失败的处理：先是只显示python的stderr；后面升级使用
 ![img](./../Assets/game_optimization_pipeline/lorpipeline21.png)
 
 
-
-## 草稿
-
-TODO:
-
-* 游戏 + 动态追踪技术 ？ => 模仿帧同步的高性能log打点
-* 关键指标的收集（影响性能的核心数据）
 
 
 
