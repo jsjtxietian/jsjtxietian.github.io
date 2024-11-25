@@ -60,6 +60,8 @@ date: 2024-10-17
 * 依靠在游戏内的预先埋点所收集的信息来进行性能分析。但是埋点本身也存在问题，埋点多了会导致采集一些根本不需要的信息，从而造成不必要的采集和存储开销；埋点少了会导致缺乏关键信息，毕竟没人可以预知未来。
 * 出dev（development）版本的包，配合对应的性能分析工具，希望可以在dev版本上重现已经ship的版本的性能问题。但是，一来这可能就导致环境的丢失从而难以复现，二来一般development版本的包的性能损失会很可观，显然并不适合对于在线游戏的实时活体分析。
 
+最终希望，像clickhouse在[Testing the Performance of ClickHouse](https://clickhouse.com/blog/testing-the-performance-of-click-house)所说的：“The user must be able to **investigate a problematic query post-mortem**, without running it again locally.” 我们可以不重跑游戏就深入观察性能问题。
+
 那么参考动态追踪技术，对于游戏的活体分析而言：
 
 * 目标：我希望能把整个游戏本身看成是一个可以直接查询的“数据库”，可以直接从这个“数据库”里安全快捷地得到我们想要的信息，而且绝不留痕迹，绝不去采集我们不需要的信息。可以随时进行采样，随时结束采样，而不用管目标系统的当前状态；保持自身的性能损耗极小，5%以内，而且即使是这么小的性能损耗也只发生在实际采样的那几十秒或者几分钟以内。
