@@ -375,6 +375,26 @@ Build管线失败的处理：先是只显示python的stderr；后面升级使用
 
 
 
+### Assassin's Creed Origins: Monitoring and Validation of World Design Data
+
+[Assassin's Creed Origins: Monitoring and Validation of World Design Data - YouTube](https://www.youtube.com/watch?v=VVq_hgaX8MQ)
+
+检测循环，What gets quantified gets managed：
+
+![image-20241127143926989](./../Assets/game_optimization_pipeline/image-20241127143926989.png)
+
+![image-20241127144320482](./../Assets/game_optimization_pipeline/image-20241127144320482.png)
+
+![image-20241127144336265](./../Assets/game_optimization_pipeline/image-20241127144336265.png)
+
+这个工具感觉很有趣，除了excel和发email以外，还有基于web的展示：
+
+![image-20241127143219514](./../Assets/game_optimization_pipeline/image-20241127143219514.png)
+
+左侧每个layer是一个单独的test，红色标记是检测不过的地方，点击标记可以直接打开游戏editor并直接导航到出问题的地方并把出问题的组件标红：
+
+![image-20241127143320068](./../Assets/game_optimization_pipeline/image-20241127143320068.png)
+
 
 
 ## 总结
