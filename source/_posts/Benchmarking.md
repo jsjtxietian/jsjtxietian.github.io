@@ -38,7 +38,7 @@ date: 2024-03-08
 
 ## 关于测量
 
-* 在代码优化中做准确的、上下文敏感的计时：[GHScan/TechNotes: Scan's personal technical notes](https://github.com/GHScan/TechNotes)
+* 在代码优化中做准确的、上下文敏感的计时：[TechNotes/2018/在代码优化中做上下文敏感的计时.md at master · GHScan/TechNotes](https://github.com/GHScan/TechNotes/blob/master/2018/在代码优化中做上下文敏感的计时.md)
 * 注意Timestamping本身的耗时和精度
   * The typical **Stopwatch** resolution on Windows is about **300–500ns**. 
   * clock_gettime(CLOCK_MONOTONIC, …) is fast — roughly 80ns — about two orders of magnitude faster than an ordinary system call.
@@ -65,5 +65,4 @@ date: 2024-03-08
 * [Getting Accurate Results - Algorithmica](https://en.algorithmica.org/hpc/profiling/noise/)
 * 需要避免的：[Gernot's List of Systems Benchmarking Crimes](https://gernot-heiser.org/benchmarking-crimes.html#mean)
 * 一些资源合集：[ECS -- Resources on Experimental Computer Science](https://www.cs.huji.ac.il/w~feit/exp/related.html)
-
 
