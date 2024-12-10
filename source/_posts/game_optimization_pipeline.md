@@ -60,7 +60,7 @@ date: 2024-10-17
 * 依靠在游戏内的预先埋点所收集的信息来进行性能分析。但是埋点本身也存在问题，埋点多了会导致采集一些根本不需要的信息，从而造成不必要的采集和存储开销；埋点少了会导致缺乏关键信息，毕竟没人可以预知未来。
 * 出dev（development）版本的包，配合对应的性能分析工具，希望可以在dev版本上重现已经ship的版本的性能问题。但是，一来这可能就导致环境的丢失从而难以复现，二来一般development版本的包的性能损失会很可观，显然并不适合对于在线游戏的实时活体分析。
 
-最终希望，像clickhouse在[Testing the Performance of ClickHouse](https://clickhouse.com/blog/testing-the-performance-of-click-house)所说的：“The user must be able to **investigate a problematic query post-mortem**, without running it again locally.” 我们可以不重跑游戏就深入观察性能问题。
+最终希望，像clickhouse在[Testing the Performance of ClickHouse](https://clickhouse.com/blog/testing-the-performance-of-click-house)所说的：“The user must be able to **investigate a problematic query post-mortem**, without running it again locally.” 我们可以不重跑游戏就深入观察性能问题。Tracy（[wolfpld/tracy: Frame profiler](https://github.com/wolfpld/tracy)）支持宏`TRACY_ON_DEMAND`，只在有profiler连上的时候才开始采集数据，部分解决了这个问题。
 
 那么参考动态追踪技术，对于游戏的活体分析而言：
 
