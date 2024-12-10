@@ -177,7 +177,6 @@ How well a CPU can process a long sequence of instructions, where each of them d
   * [data-dependency](https://github.com/Kobzol/hardware-effects/tree/master/data-dependency)
 * 注意一些hardware effects
   * denormal float的性能下降 [floating-point](https://github.com/Kobzol/hardware-effects/tree/master/floating-point)
-  * 
 
 
 
@@ -234,11 +233,8 @@ How well a CPU can process a long sequence of instructions, where each of them d
 ## More
 
 * Denis Bakhvalov大佬的 [Blog](https://easyperf.net/) 和书 [perf-book](https://github.com/dendibakh/perf-book)
-
 * [Daniel Lemire's blog](https://lemire.me/blog/)
-
 * [Kobzol/hardware-effects: Demonstration of various hardware effects.](https://github.com/Kobzol/hardware-effects/tree/master)
-
 * [Algorithms for Modern Hardware - Algorithmica](https://en.algorithmica.org/hpc/)
 
   
