@@ -23,7 +23,6 @@ date: 2024-03-08
   * But if we only look at the minimum, we are going to miss cases where some runs of the query are slow and some are not (e.g. boundary effects in some cache). So we compromise by **measuring the median**. It is a robust statistic that is reasonably sensitive to outliers and stable enough against noise.
   * Use a **non-parametric bootstrap method** to build a randomization distribution for the observed difference of median query run times. This method is described in detail in "A Randomized Design Used in the Comparison of Standard and Modified Fertilizer Mixtures for Tomato Plants"
   * The user must be able to **investigate a problematic query post-mortem**, without running it again locally.
-  
 * [Do not believe everything you read in the papers](https://timharris.uk/misc/2016-nicta.pdf)
   * **Script everything，record everything**，derive results from measurements
   * Plan how to present results before starting work：Make formats easy to explain，Make numbers easy to read off
@@ -33,12 +32,20 @@ date: 2024-03-08
 * **Randomly shuffle**:  if you have a series of benchmarks over time, and then you randomly shuffle all of the benchmarks, does the randomly shuffled one look basically the same as the original? 来自 [Benchmarking correctly is hard](https://jvns.ca/blog/2016/07/23/rigorous-benchmarking-in-reasonable-time/)
 * **Look for performance regressions not in entire applications, but in individual subroutines.**
   * Applications have thousands of subroutines, so a small performance regression for an entire app is likely a large one for the affected subroutine. This way, you're looking for ~5% regressions, not ~0.05% regressions, which makes filtering out noise easier. 来自 **FBDetect: Catching Tiny Performance Regressions at Hyperscale through In-Production Monitoring**
+* [abseil / Performance Tip of the Week #39: Beware microbenchmarks bearing gifts](https://abseil.io/fast/39)
+  * Understanding **why a particular benchmark does not produce representative results** is a critical step in improving benchmark fidelity, and can even produce insights into production behavior.  
+
 
 
 
 ## 关于测量
 
 * 在代码优化中做准确的、上下文敏感的计时：[TechNotes/2018/在代码优化中做上下文敏感的计时.md at master · GHScan/TechNotes](https://github.com/GHScan/TechNotes/blob/master/2018/在代码优化中做上下文敏感的计时.md)
+* 注意micro benchmark和实际运行时候的区别
+  * Google codes typically have large instruction footprints. Benchmarks are often cache resident.  
+  * Individual operations were benchmarked in two ways: always triggering a cache hit and always triggering a cache miss. Having explicit benchmarks for the boundary conditions - always-cache-hit and always-cache-miss gives more insight on how changes to the code affect its operations under different conditions and help develop intuition on which operations are important to optimize to reach our goal: improve production performance.
+  * [abseil / Performance Tip of the Week #39: Beware microbenchmarks bearing gifts](https://abseil.io/fast/39)
+
 * 注意Timestamping本身的耗时和精度
   * The typical **Stopwatch** resolution on Windows is about **300–500ns**. 
   * clock_gettime(CLOCK_MONOTONIC, …) is fast — roughly 80ns — about two orders of magnitude faster than an ordinary system call.
@@ -48,7 +55,7 @@ date: 2024-03-08
   * depending on link order, O3 either gives a speedup over O2  or a slow down over O2；Link order affects the alignment of code, causing conflicts within various hardware buffers (e.g. caches) and hardware heuristics (e.g. branch prediction)
 * [CI for performance: Reliable benchmarking in noisy environments](https://pythonspeed.com/articles/consistent-benchmarking-in-ci/)
   * [Measuring and Reducing CPU Usage in SQLite](https://sqlite.org/cpu.html#performance_measurement) SQLite也用Cachegrind来测量微观性能，测量CPU cycles（correlate well with real performance），优势是high repeatability，也讨论了劣势
-  
+
 * Performance matters by emery berger
   * Memory layout affects performance makes performance evaluation difficult
   * **STABILIZER eliminates the effect of layout** enables sound performance evaluation，[Stabilizer | Emery Berger](https://emeryberger.com/research/stabilizer/)

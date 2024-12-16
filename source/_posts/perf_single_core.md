@@ -9,18 +9,49 @@ date: 2024-08-19
 
 ## CPU Microarchitecture
 
-图来自[Kaby Lake - Microarchitectures - Intel - WikiChip](https://en.wikichip.org/wiki/intel/microarchitectures/kaby_lake)
+ The implementation of Intel 12th-generation core, Golden Cove
 
-![ ](../Assets/perf_single_core/skylake_block_diagram.svg)
+![image-20241216171158786](./../Assets/perf_single_core/image-20241216171158786.png)
 
-The CPU **Front-End** consists of a number of data structures that serve the main goal to efficiently fetch and decode instructions from memory. Its main purpose is to feed prepared instructions to the CPU Back-End.
+### CPU Front-End
+
+Its main purpose is to feed prepared instructions to the CPU Back-End, which is responsible for the actual execution of instructions.
+
+Once a program reaches a steady state, the branch predictor unit (**BPU**) steers the work of the CPU Frontend. The BPU predicts the target of all branch instructions and steers the next instruction fetch based on this prediction.
+
+The Instruction Decode Queue (**IDQ**) provides the interface between the in-order frontend and the out-of-order backend.
+
+### CPU Backend
 
 The CPU **Back-End** employs an Out-Of-Order engine that executes instructions and stores results. 
 
-* The heart of the CPU backend is the 224 entry ReOrder buffer (ROB). This unit handles data dependencies. The ROB maps the architecture-visible registers to the physical registers used in the scheduler/reservation station unit. ROB also provides register renaming and tracks speculative execution. ROB entries are always retired in program order. 
-* The Reservation Station/Scheduler (RS) is the structure that tracks the availability of all resources for a given UOP and dispatches the UOP to the assigned port once it is ready. The core is 8-way superscalar. Thus the RS can dispatch up to 8 UOPs per cycle. 
+The heart of the OOO engine is the 512-entry ReOrder Buffer (**ROB**): register renaming, allocates execution resources, tracks speculative execution.
 
+The “Scheduler / Reservation Station” (**RS**) is the structure that tracks the availability of all resources for a given µop and dispatches the µop to an execution port once it is ready.
 
+The FP/VEC stack does floating-point scalar and all packed (SIMD) operations. Operations that move values from the INT stack to FP/VEC and vice-versa (e.g., convert, extract, or insert) incur additional penalties.
+
+### Load-Store Unit
+
+The Load-Store Unit (LSU) is responsible for operations with memory. 
+
+**AGU** stands for Address Generation Unit, which is required to access a memory location. **AGU** is required for both load and store operations to perform dynamic address calculation. 
+
+Once a load or a store leaves the scheduler, the LSU is responsible for accessing the data. Load operations save the fetched value in a register. Store operations transfer value from a register to a location in memory. LSU has a **Load Buffer** (also known as Load Queue) and a **Store Buffer** (also known as Store Queue).
+
+When a memory load request comes, the LSU queries the L1 cache using a virtual address and looks up the physical address translation in the TLB. Those two operations are initiated simultaneously. In case of an L1 miss, the hardware initiates a query of the (private) L2 cache tags. While the L2 cache is being queried, a 64-byte wide **fill buffer (FB)** entry is allocated, which will keep the cache line once it arrives. As a way to lower the latency, a speculative query is **sent to the L3 cache in parallel** with the L2 cache lookup. Also, if two loads access the same cache line, they will hit the same FB. Such two loads will **be “glued” together** and only one memory request will be initiated.
+
+**Streaming stores**: the processor will try to combine writes to fill an entire cache line. All these optimizations are done inside the Store Buffer. The LSU supports store-to-load forwarding when there is an older store containing all of the load’s bytes, and the store’s data has been produced and is available in the store queue.
+
+Non-temporal memory accesses are special CPU instructions that do not keep the fetched line in the cache and drop it immediately after use.
+
+In most high-performance processors, the order of load and store operations is not necessarily required to be the same as the program order, which is known as a **weakly ordered memory model**.
+
+### TLB Hierarchy
+
+In case a translation was not found in the TLB hierarchy, it has to be retrieved from the DRAM by “walking” the kernel page tables. The key element to speed up the page walk procedure is a set of Paging-Structure Caches that cache the hot entries in the page table structure. 
+
+The Golden Cove microarchitecture has four dedicated page walkers, which allows it to process 4 page walks simultaneously. In the event of a TLB miss, these hardware units will issue the required loads into the memory subsystem and populate the TLB hierarchy with new entries.
 
 ### PMU
 
@@ -30,25 +61,25 @@ The CPU **Back-End** employs an Out-Of-Order engine that executes instructions a
 
 
 
-------
-
-
-
 ## 方法
 
 ### TMAM
 
-[Top-down Microarchitecture Analysis Method](https://www.intel.com/content/www/us/en/docs/vtune-profiler/cookbook/2023-0/top-down-microarchitecture-analysis-method.html)
+[Top-down Microarchitecture Analysis Method](https://www.intel.com/content/www/us/en/docs/vtune-profiler/cookbook/2023-0/top-down-microarchitecture-analysis-method.html) for identifying CPU bottlenecks in a program.
+
+Pipeline slot:
 
 > The Front-end of the pipeline on recent Intel microarchitectures can allocate four uOps per cycle, while the Back-end can retire four uOps per cycle. From these capabilities **the abstract concept of a pipeline slot** can be derived. A pipeline slot represents the hardware resources needed to process one uOp. The Top-Down Characterization assumes that for each CPU core, on each clock cycle, there are four pipeline slots available. It then uses specially designed PMU events to measure how well those pipeline slots were utilized. The status of the pipeline slots is taken at the allocation point , where uOps leave the Front-end for the Back-end. Each pipeline slot available during an application’s runtime will be classified into one of four categories based on the simplified pipeline view described above. 
 
-The concept behind TMA’s top-level breakdown[^1]：
 
-If uop for instruction was not allocated during a particular cycle of execution, it could be for two reasons: we were not able to fetch and decode it (Front End Bound), or Back End was overloaded with work and resources for new uop could not be allocated (Back End Bound). Uop that was allocated and scheduled for execution but not retired is related to the Bad Speculation bucket.
+
+At a conceptual level, TMA identifies **what is stalling the execution** of a program[^1].
+
+There are internal buffers in the CPU that keep track of information about µops that are being executed. If uop for instruction was not allocated during a particular cycle of execution, it could be for two reasons: we were not able to fetch and decode it (Front End Bound), or Back End was overloaded with work and resources for new uop could not be allocated (Back End Bound). Uop that was allocated and scheduled for execution but not retired is related to the Bad Speculation bucket. If a µop was allocated and scheduled for execution but never retired, this means it came from a mispredicted path (Bad Speculation).
 
 ![image-20241017181902586](../Assets/perf_single_core/image-20241017181846901.png)
 
-The TMA hierarchy of performance bottlenecks[^1]：
+TMA observes the execution of a program by monitoring a specific set of performance events and then calculates metrics based on predefined formulas. The TMA hierarchy of performance bottlenecks：
 
 ![image-20241017181902586](../Assets/perf_single_core/image-20241017181902586.png)
 
@@ -76,9 +107,11 @@ The Roofline Performance Model can be helpful to:
 * Determine when we’re done optimizing.
 * Assess performance relative to machine capabilities.
 
+The Roofline performance model is mainly applicable for HPC applications that have few compute-intensive loops. Do not recommend using it for general-purpose applications, such as compilers, web browsers, or databases.
 
 
-Top-Down microarchitecture analysis and Roofline performance analysis should usually be a good way to start. Most of the time you’ll see a mix of problems, so you have to analyze hotspots case by case. Figuring out predictability of code or data is relatively easy (you check Top-Down metrics) while distinguishing if your code is limited by throughput or latency is not.
+
+Top-Down microarchitecture analysis and Roofline performance analysis should usually be a good way to start. Most of the time you’ll see a mix of problems, so you have to analyze hotspots case by case. 
 
 
 
@@ -110,8 +143,6 @@ How well a CPU can process a long sequence of instructions, where each of them d
 * Ideal: massively parallel application few/short dependencies.
 * Worst: a long sequence of dependent instructions,e.g. pointer chaising. 
 
-------
-
 
 
 ## Case
@@ -124,11 +155,13 @@ How well a CPU can process a long sequence of instructions, where each of them d
   * folly的哈希表 [CppCon 2017: Matt Kulukundis “Designing a Fast, Efficient, Cache-friendly Hash Table, Step by Step”](https://www.youtube.com/watch?v=ncHmEUmJZf4)
 * Access data sequentially
   * [loop_interchange_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/memory_bound/loop_interchange_1)
+  * [loop_interchange_2 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/memory_bound/loop_interchange_2)
 * Packing the data
   * [data_packing at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/memory_bound/data_packing)
 * Aligning and padding
   * [mem_alignment_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/memory_bound/mem_alignment_1)
   * [misaligned-access](https://github.com/Kobzol/hardware-effects/tree/master/misaligned-access)
+  * Structure splitting、Pointer inlining等技巧
 * Tune the code for memory hierarchy: loop blocking (tiling), cache-oblivious algorithms...
   * [loop_tiling_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/memory_bound/loop_tiling_1)
   * [Cache-Oblivious Algorithms - Algorithmica](https://en.algorithmica.org/hpc/external-memory/oblivious/)
@@ -167,13 +200,16 @@ How well a CPU can process a long sequence of instructions, where each of them d
   * Loop Invariant Code Motion, Loop Unrolling, Loop Strength Reduction, and Loop Unswitching
   * Loop Interchange, Loop Blocking (Tiling), and Loop Fusion and Distribution (Fission)
   * [compiler_intrinsics_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/core_bound/compiler_intrinsics_1)
+  * [compiler_intrinsics_2 at mastern](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/core_bound/compiler_intrinsics_2)
 * Auto Vectorization
   * [vectorization_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/core_bound/vectorization_1)
-  * clang：`-Rpass-analysis=loop-vectorize -Rpass=loop-vectorize -Rpass-missed=loop-vectorize`
+  * [vectorization_2 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/core_bound/vectorization_2)
+  * clang：`-Rpass-analysis=loop-vectorize -Rpass=loop-vectorize -Rpass-missed=loop-vectorize`  看下为啥不能自动向量化
   * 可以看下mwish的系列文章：[SIMD Extensions and AVX](https://blog.mwish.me/2024/03/24/SIMD-Extensions-and-AVX/)
   * [Vectorization part7. Tips for writing vectorizable code. | Easyperf](https://easyperf.net/blog/2017/11/10/Tips_for_writing_vectorizable_code)
 * 去掉dependency chain
   * [dep_chains_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/core_bound/dep_chains_1)
+  * [dep_chains_2 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/core_bound/dep_chains_2)
   * [data-dependency](https://github.com/Kobzol/hardware-effects/tree/master/data-dependency)
 * 注意一些hardware effects
   * denormal float的性能下降 [floating-point](https://github.com/Kobzol/hardware-effects/tree/master/floating-point)
@@ -222,11 +258,6 @@ How well a CPU can process a long sequence of instructions, where each of them d
   * 检测：["Cutting Edge Chipset" Scheduling](https://sherief.fyi/post/cutting-edge-chipset-scheduling/) ，TBB之类的库也有代码可以参考
   * [从E-core/P-core的stream性能差异开始 - 知乎](https://zhuanlan.zhihu.com/p/689705368)
   * [再讲一个p-core和e-core的不同 - 知乎](https://zhuanlan.zhihu.com/p/714172034)
-
-
-
-
-------
 
 
 
