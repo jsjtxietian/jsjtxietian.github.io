@@ -397,6 +397,24 @@ Build管线失败的处理：先是只显示python的stderr；后面升级使用
 
 
 
+### 《三角洲行动》双端高品质的一体化生产管线与技术支撑
+
+[GDC Vault - Delta Force Techniques From Unified Production Pipeline to Cross-Platform Runtime Support (Presented by Tencent Games)](https://gdcvault.com/play/1034827/Delta-Force-Techniques-From-Unified)
+
+[《三角洲行动》双端高品质的一体化生产管线与技术支撑【GDC 2024】 - GameRes游资网](https://www.gameres.com/905639.html)
+
+我们需要的是一个跨平台工具，不需要任何预先插桩，支持长时间和广泛的数据收集，而不会影响运行时性能。因此，我们开发了自己的跨平台性能监控和分析工具，名为metaperf。
+
+![image-20241225195654374](./../Assets/game_optimization_pipeline/image-20241225195654374.png)
+
+性能捕获的整个循环由3个阶段组成。在记录阶段，我们为所有平台实现了高性能采样器：通过结合每帧的帧时间和自定义数据，我们可以获得每帧的各种游戏状态；然后，通过处理每帧的时间戳并合并样本中的所有调用链，我们可以获得一帧的完整调用树。在最后的分析阶段：我们实现了一个基于规则的自动化分析监控服务。这包括各种自动化分析方法，如皮尔逊相关系数。通过比较两个曲线之间的相关性，我们可以确定性能指标中每个函数的相关性。
+
+![image-20241225195708333](./../Assets/game_optimization_pipeline/image-20241225195708333.png)
+
+![image-20241225195726385](./../Assets/game_optimization_pipeline/image-20241225195726385.png)
+
+
+
 ## 总结
 
 欢迎提issue交流：[Issues · jsjtxietian/jsjtxietian.github.io](https://github.com/jsjtxietian/jsjtxietian.github.io/issues)
