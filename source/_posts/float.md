@@ -22,14 +22,23 @@ date: 2023-06-07
 
 ![908c155d6002beadf2df5a7c05e954ec2373ca16](./../Assets/float/908c155d6002beadf2df5a7c05e954ec2373ca16.svg)
 
-* denormal or subnormal values: when all exponent bits are zero, the formula changes to: (−1)<sup>s</sup> × 0.m × 2<sup>1-bias</sup>
-* floats have both +0.0 and -0.0
+图见[Exposing Floating Point – Bartosz Ciechanowski](https://ciechanow.ski/exposing-floating-point/)
+
+![All the special values](./../Assets/float/float_special_values.svg)
+
+* denormal or subnormal values: when all exponent bits are zero, the formula changes to: (−1)<sup>s</sup> × 0.m × 2<sup>1-bias</sup> (bias = 127 for 32bit)
+  * `x` and `y` can be normal float but `x - y` is subnormal. If it wasn’t for subnormals the difference after rounding would be equal to 0, thus implying the equality of not equal numbers.
+
+* floats have both +0.0 and -0.0 => `0.0 == -0.0` is true even though the two zeros have different encoding. Additionally, `-0.0 + 0.0` is equal to `0.0`, so by default the compiler can’t optimize `a + 0.0` into just `a`, [performance - What does gcc's ffast-math actually do? - Stack Overflow](https://stackoverflow.com/questions/7420665/what-does-gccs-ffast-math-actually-do/22135559#22135559)
 * when all exponent bits are one:
-  * Mantissa = 0 => ∞
-  * Mantissa ≠ 0 => NaN
+  * Mantissa = 0 => Infinity
+  * Mantissa ≠ 0 => NaN => By default the result of any operation involving NaNs will result in a NaN as well. NaNs are not equal to anything, even to themselves.
+* Incrementing the integer representation of the maximum `float` value by one => You get infinity. Decrementing the integer form of the minimum `float` => You enter the world of subnormals. Decrease it for the smallest subnormal => You get zero. Things fall into place just perfectly. The two caveats with this trick is that it won’t jump from +0.0 to −0.0 and vice versa.
 
 
 ![image-20241224115317225](./../Assets/float/image-20241224115317225.png)
+
+
 
 `bfloat16` is  a 16-bit floating point number type with a much smaller range and precision than the IEEE-standard `float32` type, making it much faster to compute with. The `bfloat16` is much easier to convert to and from `float32` than `float16` is -- it's just a single bit shift, because its exponent takes the same number of bits.
 
@@ -58,6 +67,60 @@ If we want to convert a number to the IEEE 754 notation, we should find the wind
 
 
 [Onboarding floating-point](https://www.altdevarts.com/p/onboarding-floating-point) 系列也提到了类似的思路，从定点数讲到如何理解浮点数，浮点数作为压缩等等。
+
+
+
+## 精度问题
+
+[Demystifying Floating Point Precision](https://blog.demofox.org/2017/11/21/)
+
+Here’s a table showing the amount of precision you get with each data type at various exponent values. N/A is used when an exponent is out of range for the specific data type.
+
+![latex](./../Assets/float/latex.png)
+
+A half float has a maximum exponent of 15, the precision is 32 which is the smallest step that can be made in a half float at that scale. That range includes the smaller number but not the larger number. That means that the largest number a half float can store is one step away (32) from the high side of that range. So, the largest number that can be stored is 65536 – 32 = **65504**.
+
+* Floating point numbers have between 6 and 7 digits of precision, regardless of exponent.
+* Half floats have 10 mantissa bits and 2^10 = 1024, so they just barely have 3 digits of precision.
+* Doubles have 52 mantissa bits and 2^52 = 4,503,599,627,370,496. That means doubles have between 15 and 16 digits of precision.
+
+
+
+### 游戏中的例子
+
+一个例子，如果记录游戏时间，每帧+0.0333，什么时候float开始失效：
+
+* floating point numbers have a precision of 0.03125 at exponent value 18. So, exponent 18 is close, but it’s precision is smaller than what we want – aka the precision is still ok.
+* things break down at exponent 19, which has precision of 0.0625. Time is actually moving almost twice as fast in this case!
+* At exponent 20, we start at 1056576.00 and adding 1/30 doesn’t even change the value. Time is now stopped.
+
+**When will I hit precision issues** => `value = pow(2, ceil(log2(mantissa * precision))`
+
+
+
+另一个例子，[A matter of precision](https://tomforsyth1000.github.io/blog.wiki.html#[[A%20matter%20of%20precision]])：
+
+if you are doing any sort of precise timing - physics, animation, sound playback - you need not just good precision, but totally reliable precision, because there tend to be a bunch of epsilons that need tuning. You're almost always taking deltas between absolute times, e.g. the current time and the time an animation started, or when a sound was triggered. Everything works fine in your game for the first five minutes, because absolute time probably started at zero, so you're getting lots of precision. But play it for four hours, and now everything's really jinky and jittery. **The reason is that four hours is right about 2^24 milliseconds, so you're running out of float precision for anything measured in milliseconds**, which is why physics and sound are particularly susceptible - but almost any motion in a game will show this jittering.
+
+- Don't start your times at zero. Start them at something big. Ideally do the same with position - by default set your origin a long way away.
+- float32 has precision problems even in normal circumstances - you only get about seven digits of precision. float64 is a tricky beast to use in practice - writing "double" in C is not sufficient.
+- Variable precision is a nightmare for reproducibility and testability - even float64. Any time you want to use doubles in a game, you probably haven't understood the algorithm.
+- Fixed-point may be old, but it works well for absolute time and position.
+- Help yourself guard against precision-cancellation problems by not exposing absolute time and position to most parts of your app. Any time you think you need them, you're almost certainly going about the problem wrong.
+
+
+
+### Storing Integers
+
+a floating point number can EXACTLY store all integers from -2<sup>MantissaBits+1</sup> to 2<sup>MantissaBits+1</sup>
+
+见 [types - Which is the first integer that an IEEE 754 float is incapable of representing exactly? - Stack Overflow](https://stackoverflow.com/questions/3793838/which-is-the-first-integer-that-an-ieee-754-float-is-incapable-of-representing-e)
+
+* For half floats that means you can store all integers between (and including) -2048 to +2048.
+* For floats, it’s -16,777,216 to +16,777,216  
+* For doubles it’s -9,007,199,254,740,992 to +9,007,199,254,740,992 => Doubles can in fact exactly represent any 32 bit unsigned integer, since 2^32 = 4,294,967,296.
+
+
 
 
 
@@ -163,6 +226,20 @@ why Python gives the result for `9007199254740993 == 9007199254740993.0` as `Fal
 
 
 
+## 渲染
+
+[A matter of precision](https://tomforsyth1000.github.io/blog.wiki.html#[[A%20matter%20of%20precision]])：The most obvious place this happens in games is when you're storing world coodinates in standard float32s, and two objects get a decent way from the origin. The first thing you do in rendering is to subtract the camera's position from each object's position, and then send that all the way down the rendering pipeline. The rest all works fine, because everything is relative to the camera, it's that first subtraction that is the problem. For example, getting only six decimal digits of precision, if you're 10km from the origin (London is easily over 20km across), you'll only get about 1cm accuracy. Which doesn't sound that bad in a static screenshot, but as soon as things start moving, you can easily see this horrible jerkiness and quantisation.
+
+
+
+fp16的shader + lux问题：
+
+[Sebastian Aaltonen on X: "Physically correct direct sun light (day) is 100,000 lux. fp16 maximum value is 65504.0. fp10 and fp11 have also 5 bit mantissa, so their range is the same. Do people pre-expose their lights to fit into fp16?" / X](https://x.com/SebAaltonen/status/1727247423385526323)
+
+
+
+
+
 ## 性能
 
 * Floating point number division is faster than integer division because of the exponent part requires only a relatively cheap fixed-cost subtraction. [performance - Why float division is faster than integer division in c++? ](https://stackoverflow.com/questions/55832817/why-float-division-is-faster-than-integer-division-in-c#)
@@ -180,6 +257,7 @@ why Python gives the result for `9007199254740993 == 9007199254740993.0` as `Fal
 ## More
 
 * 资料汇编：[Floating-point further reading - by Mike Acton - AltDevArts](https://www.altdevarts.com/p/floating-point-further-reading) 
+* Links：[21 « November « 2017 « The blog at the bottom of the sea](https://blog.demofox.org/2017/11/21/)
 * boost的文档：[Floating-point Comparison - 1.63.0](https://www.boost.org/doc/libs/1_63_0/libs/math/doc/html/math_toolkit/float_comparison.html)
 
 
@@ -193,13 +271,13 @@ why Python gives the result for `9007199254740993 == 9007199254740993.0` as `Fal
 - [Float Compression 0: Intro · Aras' website (aras-p.info)](https://aras-p.info/blog/2023/01/29/Float-Compression-0-Intro/)
 - [Exposing Floating Point – Bartosz Ciechanowski](https://ciechanow.ski/exposing-floating-point/)
 - [Managing Rounding Error (pbr-book.org)](https://pbr-book.org/3ed-2018/Shapes/Managing_Rounding_Error)
-- Demystifying Floating Point Precision[21 « November « 2017 « The blog at the bottom of the sea (demofox.org)](https://blog.demofox.org/2017/11/21/)
 - [Comparing Floating Point Numbers, 2012 Edition | Random ASCII – tech blog of Bruce Dawson (wordpress.com)](https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/)
 - [What Every Computer Scientist Should Know About Floating-Point Arithmetic (oracle.com)](https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html)
+- [Intermediate Floating-Point Precision | Random ASCII – tech blog of Bruce Dawson](https://randomascii.wordpress.com/2012/03/21/intermediate-floating-point-precision/)
 - gpgpu for science
-- round
 - 压缩
 - fp16 渲染
 - 定点数 浮点数
 - 转化 float  Converting a Floating-Point Number to IEEE-754 Format
 - TODO：pro .net benchmark的其他问题
+- [the secret life of NaN](https://anniecherkaev.com/the-secret-life-of-nan)
