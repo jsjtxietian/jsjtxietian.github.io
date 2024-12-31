@@ -33,12 +33,9 @@ date: 2023-06-07
 * when all exponent bits are one:
   * Mantissa = 0 => Infinity
   * Mantissa ≠ 0 => NaN => By default the result of any operation involving NaNs will result in a NaN as well. NaNs are not equal to anything, even to themselves.
-* Incrementing the integer representation of the maximum `float` value by one => You get infinity. Decrementing the integer form of the minimum `float` => You enter the world of subnormals. Decrease it for the smallest subnormal => You get zero. Things fall into place just perfectly. The two caveats with this trick is that it won’t jump from +0.0 to −0.0 and vice versa.
 
 
 ![image-20241224115317225](./../Assets/float/image-20241224115317225.png)
-
-
 
 `bfloat16` is  a 16-bit floating point number type with a much smaller range and precision than the IEEE-standard `float32` type, making it much faster to compute with. The `bfloat16` is much easier to convert to and from `float32` than `float16` is -- it's just a single bit shift, because its exponent takes the same number of bits.
 
@@ -66,7 +63,24 @@ If we want to convert a number to the IEEE 754 notation, we should find the wind
 
 
 
+* Incrementing the integer representation of the maximum `float` value by one => You get infinity. 
+* Decrementing the integer form of the minimum `float` => You enter the world of subnormals. 
+* Decrease it for the smallest subnormal => You get zero. 
+* Things fall into place just perfectly. The two caveats with this trick is that it won’t jump from +0.0 to −0.0 and vice versa.
+
 [Onboarding floating-point](https://www.altdevarts.com/p/onboarding-floating-point) 系列也提到了类似的思路，从定点数讲到如何理解浮点数，浮点数作为压缩等等。
+
+
+
+### Storing Integers
+
+a floating point number can EXACTLY store all integers from -2<sup>MantissaBits+1</sup> to 2<sup>MantissaBits+1</sup>
+
+见 [types - Which is the first integer that an IEEE 754 float is incapable of representing exactly? - Stack Overflow](https://stackoverflow.com/questions/3793838/which-is-the-first-integer-that-an-ieee-754-float-is-incapable-of-representing-e)
+
+* For half floats that means you can store all integers between (and including) -2048 to +2048.
+* For floats, it’s -16,777,216 to +16,777,216  
+* For doubles it’s -9,007,199,254,740,992 to +9,007,199,254,740,992 => Doubles can in fact exactly represent any 32 bit unsigned integer, since 2^32 = 4,294,967,296.
 
 
 
@@ -86,7 +100,7 @@ A half float has a maximum exponent of 15, the precision is 32 which is the smal
 
 
 
-### 游戏中的例子
+### 例1，游戏时间
 
 一个例子，如果记录游戏时间，每帧+0.0333，什么时候float开始失效：
 
@@ -98,7 +112,7 @@ A half float has a maximum exponent of 15, the precision is 32 which is the smal
 
 
 
-另一个例子，[A matter of precision](https://tomforsyth1000.github.io/blog.wiki.html#[[A%20matter%20of%20precision]])：
+另一个例子，[A matter of precision](https://tomforsyth1000.github.io/blog.wiki.html#[[A%20matter%20of%20precision]])中提到的记录绝对时间：
 
 if you are doing any sort of precise timing - physics, animation, sound playback - you need not just good precision, but totally reliable precision, because there tend to be a bunch of epsilons that need tuning. You're almost always taking deltas between absolute times, e.g. the current time and the time an animation started, or when a sound was triggered. Everything works fine in your game for the first five minutes, because absolute time probably started at zero, so you're getting lots of precision. But play it for four hours, and now everything's really jinky and jittery. **The reason is that four hours is right about 2^24 milliseconds, so you're running out of float precision for anything measured in milliseconds**, which is why physics and sound are particularly susceptible - but almost any motion in a game will show this jittering.
 
@@ -110,21 +124,23 @@ if you are doing any sort of precise timing - physics, animation, sound playback
 
 
 
-### Storing Integers
+### 例2，渲染
 
-a floating point number can EXACTLY store all integers from -2<sup>MantissaBits+1</sup> to 2<sup>MantissaBits+1</sup>
+**Jitter**：The matrix multiply is operating on large values with sparse 32-bit floating-point representations. A small change in the object or viewer position may not result in any change as roundoff errors produce the same results, but then suddenly roundoff error jumps to the next representable value and the object appears to jitter.
 
-见 [types - Which is the first integer that an IEEE 754 float is incapable of representing exactly? - Stack Overflow](https://stackoverflow.com/questions/3793838/which-is-the-first-integer-that-an-ieee-754-float-is-incapable-of-representing-e)
+**Jitter is view-dependent**: when the viewer is very close to an object, a pixel may cover less than a meter, or even a centimeter, and therefore, jittering artifacts are prominent. When the viewer is zoomed out, a pixel may cover hundreds of meters or more, and precision errors do not introduce enough jitter to shift entire pixels; therefore, jitter is not noticeable.
 
-* For half floats that means you can store all integers between (and including) -2048 to +2048.
-* For floats, it’s -16,777,216 to +16,777,216  
-* For doubles it’s -9,007,199,254,740,992 to +9,007,199,254,740,992 => Doubles can in fact exactly represent any 32 bit unsigned integer, since 2^32 = 4,294,967,296.
+[A matter of precision](https://tomforsyth1000.github.io/blog.wiki.html#[[A%20matter%20of%20precision]])的解释：The most obvious place this happens in games is when you're storing world coodinates in standard float32s, and two objects get a decent way from the origin. The first thing you do in rendering is to subtract the camera's position from each object's position, and then send that all the way down the rendering pipeline. The rest all works fine, because everything is relative to the camera, it's that first subtraction that is the problem. For example, getting only six decimal digits of precision, if you're 10km from the origin (London is easily over 20km across), you'll only get about 1cm accuracy. Which doesn't sound that bad in a static screenshot, but as soon as things start moving, you can easily see this horrible jerkiness and quantisation.
 
 
 
+**Depth Buffer Precision（z-fighting）**：the depth buffer cannot tell which object is in front of which. The artifacts tend to flicker as the viewer moves around. 
+
+For orthographic projections, this usually isn’t a concern because the relationship between eye space z, z<sub>eye</sub>, and window space z, z<sub>window</sub>, is **linear**. In perspective projections, this relationship is **nonlinear**. Objects near the viewer have small z<sub>eye</sub>values, with plenty of potential z<sub>window</sub> values to map to, allowing the depth buffer to resolve visibility correctly. The farther away an object, the larger its z<sub>eye</sub>. Due to the nonlinear relationship, these z<sub>eye</sub>values have much less z<sub>window</sub>values to map to, so the depth buffer has trouble resolving visibility of distant objects close to each other, which creates z-fighting artifacts.
 
 
-## 比较
+
+## 浮点数的比较
 
 [Comparing Floating-Point Numbers Is Tricky](https://bitbashing.io/comparing-floats.html)
 
@@ -226,18 +242,6 @@ why Python gives the result for `9007199254740993 == 9007199254740993.0` as `Fal
 
 
 
-## 渲染
-
-[A matter of precision](https://tomforsyth1000.github.io/blog.wiki.html#[[A%20matter%20of%20precision]])：The most obvious place this happens in games is when you're storing world coodinates in standard float32s, and two objects get a decent way from the origin. The first thing you do in rendering is to subtract the camera's position from each object's position, and then send that all the way down the rendering pipeline. The rest all works fine, because everything is relative to the camera, it's that first subtraction that is the problem. For example, getting only six decimal digits of precision, if you're 10km from the origin (London is easily over 20km across), you'll only get about 1cm accuracy. Which doesn't sound that bad in a static screenshot, but as soon as things start moving, you can easily see this horrible jerkiness and quantisation.
-
-
-
-fp16的shader + lux问题：
-
-[Sebastian Aaltonen on X: "Physically correct direct sun light (day) is 100,000 lux. fp16 maximum value is 65504.0. fp10 and fp11 have also 5 bit mantissa, so their range is the same. Do people pre-expose their lights to fit into fp16?" / X](https://x.com/SebAaltonen/status/1727247423385526323)
-
-
-
 
 
 ## 性能
@@ -257,6 +261,7 @@ fp16的shader + lux问题：
 ## More
 
 * 资料汇编：[Floating-point further reading - by Mike Acton - AltDevArts](https://www.altdevarts.com/p/floating-point-further-reading) 
+* Links：[Exposing Floating Point – Bartosz Ciechanowski](https://ciechanow.ski/exposing-floating-point/)
 * Links：[21 « November « 2017 « The blog at the bottom of the sea](https://blog.demofox.org/2017/11/21/)
 * boost的文档：[Floating-point Comparison - 1.63.0](https://www.boost.org/doc/libs/1_63_0/libs/math/doc/html/math_toolkit/float_comparison.html)
 
@@ -269,15 +274,15 @@ fp16的shader + lux问题：
 
 - [cbloom rants: Float to int casts for data compression](http://cbloomrants.blogspot.com/2023/07/float-to-int-casts-for-data-compression.html)
 - [Float Compression 0: Intro · Aras' website (aras-p.info)](https://aras-p.info/blog/2023/01/29/Float-Compression-0-Intro/)
-- [Exposing Floating Point – Bartosz Ciechanowski](https://ciechanow.ski/exposing-floating-point/)
 - [Managing Rounding Error (pbr-book.org)](https://pbr-book.org/3ed-2018/Shapes/Managing_Rounding_Error)
 - [Comparing Floating Point Numbers, 2012 Edition | Random ASCII – tech blog of Bruce Dawson (wordpress.com)](https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/)
 - [What Every Computer Scientist Should Know About Floating-Point Arithmetic (oracle.com)](https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html)
 - [Intermediate Floating-Point Precision | Random ASCII – tech blog of Bruce Dawson](https://randomascii.wordpress.com/2012/03/21/intermediate-floating-point-precision/)
-- gpgpu for science
-- 压缩
-- fp16 渲染
+- gpgpu for science：Round，fp16
 - 定点数 浮点数
-- 转化 float  Converting a Floating-Point Number to IEEE-754 Format
-- TODO：pro .net benchmark的其他问题
+- pro .net benchmark的其他问题性能
 - [the secret life of NaN](https://anniecherkaev.com/the-secret-life-of-nan)
+- [c - Printf width specifier to maintain precision of floating-point value - Stack Overflow](https://stackoverflow.com/questions/16839658/printf-width-specifier-to-maintain-precision-of-floating-point-value/19897395#19897395)
+- [Hexadecimal Floating-Point Constants - Exploring Binary](https://www.exploringbinary.com/hexadecimal-floating-point-constants/)
+- [Floating Point | Random ASCII – tech blog of Bruce Dawson](https://randomascii.wordpress.com/category/floating-point/)
+- fp16 渲染：[Sebastian Aaltonen on X: "Physically correct direct sun light (day) is 100,000 lux. fp16 maximum value is 65504.0. fp10 and fp11 have also 5 bit mantissa, so their range is the same. Do people pre-expose their lights to fit into fp16?" / X](https://x.com/SebAaltonen/status/1727247423385526323)
