@@ -242,6 +242,50 @@ why Python gives the result for `9007199254740993 == 9007199254740993.0` as `Fal
 
 
 
+## 跨平台计算同步
+
+[从零开始实现浮点数跨平台确定性](https://zhuanlan.zhihu.com/p/682531986)：确保不同平台上，**每一步计算的每个bit都必须相同**。需要一套日志系统，尽量详尽地记录确定性系统中每一步中间结果。把那些浮点数们，使用二进制序列化库，写到磁盘上。
+
+
+
+### 硬件差异
+
+* older x86 with x87 instructions内部浮点单元使用了80位精度（[Extended precision - Wikipedia](https://en.wikipedia.org/wiki/Extended_precision)）；主流硬件对IEEE 754-2008基本做到了支持，X64和arm64支持，，SSE、AVX、NEON同样支持IEEE 754-2008，乃至CUDA也支持，并且x64浮点数默认64位内部精度。
+* 特定指令：FMA（fused multiply–add）指令，即C99 fmaf()，就不在IEEE规范内；还有SSE经典的_mm_rsqrt_ps()倒数平方根指令， 与NEON的对应版本有效数字位数不同
+* IEEE 754-2008保证了大部分浮点数确定性，但意外总是存在的，尤其在处理特殊值`+0.0`、`-0.0`、`NaN`的时候
+* long double问题，80位还是64位：[long double - Wikipedia](https://en.wikipedia.org/wiki/Long_double)
+* [std::simd - Rust](https://doc.rust-lang.org/std/simd/index.html)：Portable SIMD is consistent between targets, This has one notable exception: a handful of older architectures (e.g. armv7 and powerpc) **flush subnormal f32 values to zero**. On these architectures, subnormal f32 input values are replaced with zeros, and any operation producing subnormal f32 values produces zeros instead. This doesn’t affect most architectures or programs.、
+
+
+
+### 编译器优化
+
+* 浮点数不遵守结合律、分配律：指令重排、常量合并等优化，恰恰可以视为结合律、分配律的应用；编译器有可能将标量（FPU）版本的浮点数计算转化为矢量（SIMD）版本；对非常接近0的小数字执行FTZ（flush-to-zero）优化；FMA（fused multiply–add）优化。以上优化都可能引入额外的不确定性。
+* C/C++默认优化级别较高。需要手动关闭fast-math，-ffp-model=precise（clang/gcc）、/fp:precise（MSVC）。还需手动关闭浮点数融合指令，即我们前文所述的FMA乘加指令、平方根倒数指令等，-ffp-contract=off（clang/gcc）、/fp:contract（MSVC VS2022以上）。另外，在Rust中混编C/C++时也要开启这些标签。
+
+
+
+### 第三方库
+
+* IEEE规范了浮点数的基础运算，但没有规范sin、cos、exp等复杂函数。这导致了不同版本的libc中，它们的实现不保证相同（比如MSVC和GCC里就不同）。
+* 整个确定性系统都不能依赖外部时间，乃至一切外部输入。随机数会出现在某些算法与容器中，如哈希表。
+* libc内置的qsort是不稳定的，不同实现的版本，可能导致两个值相等，内部字段不同的对象顺序颠倒。
+* 序列化：推荐二进制序列化方案，拷字节引入的麻烦总是较少。Rust推荐rkyv、bincode。C/C++的protobuf、messagepack理论上可用
+
+
+
+### 建议
+
+[Jolt Physics: Jolt Physics](https://jrouwe.github.io/JoltPhysics/index.html#deterministic-simulation)提供了一些确定性的建议，并给出了确定性的代价：This will make the library **approximately 8% slower** but the simulation will be deterministic. The most important things to look out for in your own application:
+
+- Compile your application mode in Precise mode (clang: -ffp-model=precise, MSVC: /fp:precise)
+- Turn off floating point contract operations (clang: -ffp-contract=off)
+- Make sure the FPU state is consistent across platforms / threads. Check the floating point rounding behavior (should be nearest). Check that the denormals are zero (DAZ) and flush to zero (FTZ) flags are set consistently.
+- Do not use the standard trigonometry functions (`sin`, `cos` etc.) as they have different implementations on different platforms, use Jolt's functions ([Sin](https://jrouwe.github.io/JoltPhysics/_trigonometry_8h.html#a89091907eb3da97f690e324849d773cb), [Cos](https://jrouwe.github.io/JoltPhysics/_trigonometry_8h.html#a40fafb1c427199b6855d704fc79cd1cf) etc.).
+- Do not use `std::sort` as it has a different implementation on different platforms, use [QuickSort](https://jrouwe.github.io/JoltPhysics/_quick_sort_8h.html#a09973cb7cb8a1e98a51005ecedaf6eff) instead.
+- Do not use `std::push_heap` and `std::pop_heap` as it has a different implementation on different platforms when elements are equal, use [BinaryHeapPush](https://jrouwe.github.io/JoltPhysics/_binary_heap_8h.html#ad87bf12de089dabad479dd7535aa997e)/[BinaryHeapPop](https://jrouwe.github.io/JoltPhysics/_binary_heap_8h.html#aa90b54155ed2d5a542d7d693dc73e89b) instead.
+- Do not use `std::hash` as it is also platform dependent, use [Hash](https://jrouwe.github.io/JoltPhysics/struct_hash.html) instead.
+
 
 
 ## 性能
@@ -251,14 +295,11 @@ why Python gives the result for `9007199254740993 == 9007199254740993.0` as `Fal
 
 
 
-## 工具
-
-* 查看浮点数：[Float Exposed](https://float.exposed/0x4e6e0000)
-* [Float Toy (evanw.github.io)](https://evanw.github.io/float-toy/)
-
-
-
 ## More
+
+* 工具：
+  * 查看浮点数：[Float Exposed](https://float.exposed/0x4e6e0000)
+  * [Float Toy (evanw.github.io)](https://evanw.github.io/float-toy/)
 
 * 资料汇编：[Floating-point further reading - by Mike Acton - AltDevArts](https://www.altdevarts.com/p/floating-point-further-reading) 
 * Links：[Exposing Floating Point – Bartosz Ciechanowski](https://ciechanow.ski/exposing-floating-point/)
@@ -270,19 +311,21 @@ why Python gives the result for `9007199254740993 == 9007199254740993.0` as `Fal
 
 ## TODO
 
-* [从零开始实现浮点数跨平台确定性（帧同步） - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/682531986)
-
 - [cbloom rants: Float to int casts for data compression](http://cbloomrants.blogspot.com/2023/07/float-to-int-casts-for-data-compression.html)
+- [Beware of fast-math](https://simonbyrne.github.io/notes/fastmath/)
 - [Float Compression 0: Intro · Aras' website (aras-p.info)](https://aras-p.info/blog/2023/01/29/Float-Compression-0-Intro/)
 - [Managing Rounding Error (pbr-book.org)](https://pbr-book.org/3ed-2018/Shapes/Managing_Rounding_Error)
 - [Comparing Floating Point Numbers, 2012 Edition | Random ASCII – tech blog of Bruce Dawson (wordpress.com)](https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/)
 - [What Every Computer Scientist Should Know About Floating-Point Arithmetic (oracle.com)](https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html)
 - [Intermediate Floating-Point Precision | Random ASCII – tech blog of Bruce Dawson](https://randomascii.wordpress.com/2012/03/21/intermediate-floating-point-precision/)
 - gpgpu for science：Round，fp16
-- 定点数 浮点数
+- 定点数
+- [The pitfalls of verifying floating-point computations](https://hal.science/file/index/docid/281429/filename/floating-point-article.pdf)
 - pro .net benchmark的其他问题性能
 - [the secret life of NaN](https://anniecherkaev.com/the-secret-life-of-nan)
 - [c - Printf width specifier to maintain precision of floating-point value - Stack Overflow](https://stackoverflow.com/questions/16839658/printf-width-specifier-to-maintain-precision-of-floating-point-value/19897395#19897395)
 - [Hexadecimal Floating-Point Constants - Exploring Binary](https://www.exploringbinary.com/hexadecimal-floating-point-constants/)
 - [Floating Point | Random ASCII – tech blog of Bruce Dawson](https://randomascii.wordpress.com/category/floating-point/)
 - fp16 渲染：[Sebastian Aaltonen on X: "Physically correct direct sun light (day) is 100,000 lux. fp16 maximum value is 65504.0. fp10 and fp11 have also 5 bit mantissa, so their range is the same. Do people pre-expose their lights to fit into fp16?" / X](https://x.com/SebAaltonen/status/1727247423385526323)
+- [Float Precision Revisited: Nine Digit Float Portability | Random ASCII – tech blog of Bruce Dawson](https://randomascii.wordpress.com/2013/02/07/float-precision-revisited-nine-digit-float-portability/)
+- [dtolnay/ryu: Fast floating point to string conversion](https://github.com/dtolnay/ryu)
