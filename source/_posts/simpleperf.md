@@ -67,9 +67,73 @@ date: 2025-02-12
 * 如果一开始就记录下每次的实验条件与log，那么后面可能不会有那么多次无效实验，可以翻看之前的试验记录来确认问题（当然也不能对自己太严苛，虽说要记录所有东西，但是在不知道问题的时候，很可能也不知道该记录什么）。
 * 如果一开始更加专注一些，不要让实验的scope太大（条件组合数量爆炸），也能节约很多精力。整体来看，虽然对比perfetto和simpleperf、unity2018还是2022的libunity.so等让我踩了点坑，但对比分析还是帮了很多忙。
 * 如果做到下面的，就能更快速帮助我定位问题：
-  * 一开始抛开高层的脚本从底层命令来使用simpleperf，可能会就更加理解simpleperf的工作原理（关于binary_cache，native_lib，build id，symbol位置等等）
+  * 一开始抛开高层的脚本从底层命令来使用simpleperf，可能会就更加理解simpleperf的工作原理（关于binary_cache，native_lib，build id匹配，symbol位置等等）
   * 一开始就认真读文档来了解simpleperf，发现dump和no-dump-symbols等命令
-  * 一开始就更了解堆栈采样、libunwind等的工作原理
+  * 一开始就更了解unity strip的底层逻辑、堆栈采样、libunwind等的工作原理
 
 慢慢抽丝剥茧，从现有证据出发，大胆假设小心求证，必要时寻求外部帮助。最重要的可能是，不放过这个问题，能坚持探究。接下来还有很多要做的，加油吧。
+
+
+
+## 后续
+
+[BUG Simperf incorrectly resolves symbol names in libunity.so · Issue #2125 · android/ndk](https://github.com/android/ndk/issues/2125#issuecomment-2667220290)里面有老哥帮忙看了下，说这个只有符号的libunity.so本身有问题：
+
+> the file offsets of program header is corrupted:
+>
+> $ readelf -lW libunity.so
+> Elf file type is DYN (Shared object file)
+> Entry point 0x538d30
+> There are 10 program headers, starting at offset 64
+>
+> Program Headers:
+> Type Offset VirtAddr PhysAddr FileSiz MemSiz Flg Align
+> PHDR 0x000040 0x0000000000000040 0x0000000000000040 0x000230 0x000230 R 0x8
+> LOAD 0x000000 0x0000000000000000 0x0000000000000000 0x00032c 0x537d24 R 0x1000
+> LOAD **0x000d30** 0x0000000000538d30 0x0000000000538d30 0x000000 0x121bea0 R E 0x1000
+> LOAD 0x001bd0 0x0000000001755bd0 0x0000000001755bd0 0x000000 0x073420 RW 0x1000
+> LOAD 0x001ff0 0x00000000017c9ff0 0x00000000017c9ff0 0x000000 0x111a90 RW 0x1000
+> DYNAMIC 0x001bd0 0x00000000017c54a8 0x00000000017c54a8 0x000000 0x000210 RW 0x8
+> GNU_RELRO 0x001bd0 0x0000000001755bd0 0x0000000001755bd0 0x000000 0x073430 R 0x1
+> GNU_EH_FRAME 0x00032c 0x00000000002c70dc 0x00000000002c70dc 0x000000 0x080934 R 0x4
+> GNU_STACK 0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW 0
+> NOTE 0x000270 0x0000000000000270 0x0000000000000270 0x0000bc 0x0000bc R 0x4
+>
+> I think a correct Offset for the executable LOAD segment should be 0x537d30. The correct offset for the executable LOAD segment appears to be 0x537d30. But it is modified to 0x000d30.
+> Since it is deliberately corrupted, it isn't simpleperf's problem to symbolize it correctly.
+> However, the virtual addresses for symbols in the symbol table still look correct. That's probably why you can get correct symbol name with llvm-addr2line.
+
+那就很有趣了，我对dev版本的libunity.so做了个实验（release不行，符号和实现已经分开了）
+
+对原版libunity.so：
+
+> Entry point 0x80fe80
+>
+> Program Headers:
+>   Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+>   PHDR           0x000040 0x0000000000000040 0x0000000000000040 0x000230 0x000230 R   0x8
+>   LOAD           0x000000 0x0000000000000000 0x0000000000000000 **0x80ee7c** 0x80ee7c R   0x1000
+>   LOAD           **0x80ee80 0x000000000080fe8**0 0x000000000080fe80 0x1c472f0 0x1c472f0 R E 0x1000
+
+跑一下llvm-objcopy --strip-debug，对strip debug的：  
+
+> Entry point 0x80fe80
+>
+> Program Headers:
+>   Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+>   PHDR           0x000040 0x0000000000000040 0x0000000000000040 0x000230 0x000230 R   0x8
+>   LOAD           0x000000 0x0000000000000000 0x0000000000000000 **0x80ee7c** 0x80ee7c R   0x1000
+>   LOAD           **0x80ee80 0x000000000080fe80** 0x000000000080fe80 0x1c472f0 0x1c472f0 R E 0x1000
+
+跑一下llvm-objcopy  --only-keep-debug，对only debug的：  
+
+> Entry point 0x80fe80
+>
+> Program Headers:
+>   Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+>   PHDR           0x000040 0x0000000000000040 0x0000000000000040 0x000230 0x000230 R   0x8
+>   LOAD           0x000000 0x0000000000000000 0x0000000000000000 **0x00032c** 0x80ee7c R   0x1000
+>   LOAD           **0x000e80 0x000000000080fe80** 0x000000000080fe80 0x000000 0x1c472f0 R E 0x1000
+
+所以看起来unity的那个符号so（libunity.sym.so）就是会这样，就不适合来给simpleperf或者perfetto使用，这俩期待的是包含符号的完整的so，而unity没有给这样的so（我不确定unity一定是这样的行为，看代码大概是，具体需要调试源码看看）。而我不给符号给simpleperf恰好就是绕开了这个问题，也错怪perfetto了。真就是知识到用的时候才觉得少，但庆幸自己一路坚持了下来。
 
