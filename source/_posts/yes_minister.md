@@ -15,13 +15,13 @@ date: 2025-02-17
 
 可以说DAA这个部门给了编剧很大的灵活度，因此YM每一集的内容主题可以相对而言有所变化（想想如果是财政部，那可能编剧的素材收集范围就会很小多），毕竟Administrative Affairs的概念太广了。当然到了YPM的时代就不同了，作为PM的Jim就需要和各个不同的部门打交道，从最开始的国防部（三叉戟问题），到S1E3财政部，S1E6外交部，S2E1就业部，S2E4 中央银行，S2E5 地方政府，S2E6 艺术，S2E7 教育部，可以看出大概编剧也有这个心思。
 
-单线或者双线，一大一小，相对比较好的就是前期埋了伏笔的，比如S2E1，前期单独的inquiry和难民问题都提到了，正常的如YPM S1E8 小孩的狗丢了和Humphrey的故事各自独立推进然后最后交汇，也有YPM S2E6那种没办法让Dorothy机械将神干掉他们的计划
-
 #### 人物成长
 
-虽然是单元剧，但是角色的成长弧线也很清晰，尤其是Jim和Benard，Humphrey倒是很难说有明显的成长，毕竟他其实是这个制度的化身，追求的就是stability。Jim作为一个新来的minister，在S1简直可以说是到处闯祸，差点断送前程，最后一集更是送走了“自己人”Frank；S2开始收敛了，在最后一集成功背刺了Humphrey，在首相面前保住了自己的地位，证明了自己的loyalty；S3则一路“高歌猛进”，DAA的职责越来越大，拿到了local government管辖权，Jim本人成为了moral vacuum，甚至最后一集在Humphrey和Benard的“助攻”下，一箭双雕，稳住了自己在选区的地位，也额外当上了艺术大臣，功成名就。在成为首相之后，杀手本能也发动地更加频繁，YPM S1E6和S2E6中，在Paul的演技加持下，那种恐怖的眼神，一瞬间杀气就出来了。而且Jim在首相阶段手段更多，即使是Humphrey也没法硬刚了（YM S1E5中Humphrey简直可以说是撕破脸在硬刚），YPM S1E3中Humphrey则是典型的不敢硬刚的样子，硬刚Jim的Luke直接被送去了以色列（YPM S1E6）。Jim也就是被Dorothy嘴了不敢还嘴。
+虽然是单元剧，但是角色的成长弧线也很清晰，尤其是Jim和Benard，Humphrey倒是很难说有明显的成长，毕竟他其实是这个制度的化身，追求的就是stability。Jim作为一个新来的minister，在S1简直可以说是到处闯祸，差点断送前程，最后一集更是送走了“自己人”Frank；S2开始收敛了，在最后一集成功背刺了Humphrey，在首相面前保住了自己的地位，证明了自己的loyalty；S3则一路“高歌猛进”，DAA的职责越来越大，拿到了local government管辖权，Jim本人成为了moral vacuum，甚至最后一集在Humphrey和Benard的“助攻”下，一箭双雕，稳住了自己在选区的地位，也额外当上了艺术大臣，功成名就。而且Jim在首相阶段手段更多，即使是Humphrey也没法硬刚了（YM S1E5中Humphrey简直可以说是撕破脸在硬刚），YPM S1E3中Humphrey则是典型的不敢硬刚的样子，硬刚Jim的Luke直接被送去了以色列（YPM S1E6）。Jim也就是被Dorothy嘴了不敢还嘴。
 
-Benard的成长也清晰可见，从一开始会被Humphrey用以后的生涯敲打威胁，到S3E6完全展现High Flyer的潜质得到上级Humphrey的认可，再到YPM S1E4完全不怕Humphrey的威胁，最后到最后一集启示完全不输Humprey。可以说Benard几乎是胜利的天平那最后一块砝码，他偏向哪边哪边就有优势，而且他的人缘相当好。可以注意到很有趣的一点，Humphrey从来没去过Jim家里，但是Benard作为私人秘书、Dorothy作为政治顾问都去过Jim家，这也是Proximity的体现吧。当然Benard这个角色的设置也有其工具属性在，他需要帮助观众来提问从而让Humphrey有回答的机会，因此可能编剧需要他表现得“傻傻”的（别忘了整本书都是Benard审核过的回忆录）。
+Benard的成长也清晰可见，从一开始会被Humphrey用以后的生涯敲打威胁，到S3E5向Hacker解释公务员系统、S3E6完全展现High Flyer的潜质得到上级Humphrey的认可，到YPM S1E4完全不怕Humphrey的威胁，最后到最后一集气势完全不输Humprey。可以说Benard几乎是胜利的天平那最后一块砝码，他偏向哪边哪边就有优势，而且他的人缘相当好。可以注意到很有趣的一点，Humphrey从来没去过Jim家里，但是Benard作为私人秘书、Dorothy作为政治顾问都去过Jim家，这也是Proximity的体现吧。当然Benard这个角色的设置也有其工具属性在，他需要帮助观众来提问从而让Humphrey有回答的机会，因此可能编剧需要他表现得“傻傻”的（别忘了整本书都是Benard审核过的回忆录）。
+
+#### 暗线与配角
 
 除了人物的成长外，还有一些比较隐晦的前后联系：
 
@@ -30,9 +30,11 @@ Benard的成长也清晰可见，从一开始会被Humphrey用以后的生涯敲
 * S1E6中Humphrey和Jumbo教Bernard的Conjuror trick，在YPM S1E7中由Benard对Jim再次教学："It'll be a conjuring trick. You know, Take any card -- you always end up with the card the magician forces you to take."
 * 这里也有一个关于South Derbyshire的，但我看书里面似乎是不同的地区，没有强力联系起来：[英剧《是，大臣》《是，首相》中有哪些细思恐极的细节](https://www.zhihu.com/question/299260527/answer/1900339337)
 
-常驻配角的串联也给人一种整体感，像是银行家、Bill、Sir Frank、PM等，这里有相对全面的总结：[能给我简述一下《是，大臣》和《是，首相》里的人物关系（人名，关系，职务）吗](https://www.zhihu.com/question/389667756/answer/1661515166)。
+常驻配角的串联也给人一种整体感，像是银行家、Bill、Sir Frank、PM等，这里有相对全面的总结：[能给我简述一下《是，大臣》和《是，首相》里的人物关系（人名，关系，职务）吗](https://www.zhihu.com/question/389667756/answer/1661515166)。说到前任PM可以多说几句，虽然这位大名鼎鼎的PM在YM中根本没露过面，但是其影响无处不在，可以说是最大的一条暗线。上台开始党内人才凋零，PM不得不给他的党内对手Martin外交部，给Jim当DAA的大臣。上台开始就和美国人打好关系（S1E1），任命了像恐怖分子一样的党鞭Vic，然后是苏格兰的by-election（S1E2），还差点废了Jim的DAA作为报复（S1E5）；后面经常宣布要Cabinet Reshuffle弄的大臣们都惴惴不安，提拔恶心人的Corbett，差点就踢掉Jim就去欧共体了（S2E5），和Malcolm Rhodes合作揭露为啥很难砍政府开支（S2E7）；最后更是在熬走了讨厌的继任者Ray之后成功激流勇退（YPM的书中提到了前任PM可能是因为预见到了经济危机才明哲保身跑路的）。此时党内人才济济，至少财政大臣和外交大臣都是狠人，和他上任之初已经完全不同了。尤其的是在YM中PM一直是用的中性化的称呼，我们连性别都不知道，只有在YPM中才提到了前PM的名字：Herbert Attwell。
 
+此时对比一下在YPM中的Jim就很有趣，Jim完全不敢一直搞resheffle，开掉了就业大臣之后就不敢动任何内阁成员了，毕竟Jim是作为compromised candidate上任的，没啥实际的操控力，和前任PM差远了，这也可以解释Jim那么重视Popularity。前PM对Jim的评价也是精准：
 
+> Hacker was more interested in votes than principles. He ran for cover at the first whiff of unpopularity. He raised the average age of the Cabinet but lowered the average IQ.
 
 #### 服装与表演
 
@@ -43,33 +45,23 @@ Benard的成长也清晰可见，从一开始会被Humphrey用以后的生涯敲
 * Bernard则是随着时间的不同，服装变化最多的。在YM中，Benard正在摸索熟悉公务员系统，其剧中早期着装是十分时髦的，深蓝色单排扣西装搭配粉色的衬衫，偶尔像银行家那样搭配领针和袖扣。在YPM中，他的着装有了彻底的改变，几乎和Sir Humphrey传统打扮相同级别，放弃了色彩明亮的衬衫，取而代之的是跟Humphrey相同的白色或蓝色衬衫。
 * Dorothy就不一样了，服装就相对时尚、鲜艳很多（毕竟不需要穿西装），在一群西装男里鹤立鸡群。也不止是她，其他女性角色大多也都是如此，例如Jim的夫人、S3E1的Sarah Harrison等。
 
-另一方面演员的演技也相当好，Jim的two face，从一本正经到瞬间变脸（YPM S2E2那边太经典了），沉浸于自我良好时候的丘吉尔上身（YPM S1E1的自我演讲等），杀手本能启动时候那种杀气；Humprey的那种高傲优雅，长难句时候的面无表情；Benrad那插科打诨，人畜无害的伪装和腹黑，可圈可点。
+另一方面演员的演技也相当好，Jim的two face，从一本正经到瞬间变脸（YPM S2E2那边太经典了），沉浸于自我良好时候的丘吉尔上身（YPM S1E1的自我演讲等），杀手本能启动时候那种杀气（YPM S1E6和S2E6中，在Paul的演技加持下，那种恐怖的眼神，一瞬间杀气就出来了）；Humprey的那种高傲、优雅、从容，长难句时候的面无表情；Benrad那插科打诨，人畜无害的伪装和腹黑，可圈可点。
 
-除了下文要分析的语言游戏，还有很多小细节，例如站位，两次干掉两个frank的时候最明显（也不知道是不是巧合）。S1E7的最后，Jim站到Humphrey旁边，一起出主义把“自己人”Frank弄走，给个肥差滚吧，标志着初步的合流；YPM S1E5 Jim则和Humphrey、Dorothy坐在一排，打击了财政部的Frank的加薪计划，也挫败了Frank想当公务员首领的野心，A real Partnership。
-
-
-
-YPM作为YM的对比，两个PM的对比，前任一直reshuffle，jim完全不敢，只敢开一个；中性化的pm，ypm中就用he了；前pm对jim的评价想当精准
+除了下文要分析的语言游戏，还有很多小细节，例如站位，两次干掉两个frank的时候最明显（也不知道是不是巧合）。S1E7的最后，Jim站到Humphrey旁边，一起出主意把“自己人”Frank弄走，给个肥差滚吧，标志着初步的合流；YPM S1E5 Jim则和Humphrey、Dorothy坐在一排，打击了财政部的Frank的加薪计划，也挫败了Frank想当公务员首领的野心，A real Partnership。
 
 
 
-#### 叙述视角
+#### 叙事与视角
 
-之前的文案都是书里面来的
+叙事本身就是很正常的单元剧风格，围绕着主题设置了单线或者双线叙事，不过即使是双线也是有所侧重并且最后会回到单元的主题。典型的双线叙事的例子，比如YPM S1E8，Linda的狗走丢了和Humphrey的渎职事件双线并行，各自独立推进然后最后交汇；像S2E2虽然讨论的是两件事（把荣誉和经济挂钩、Belly的外国学生招生问题），但是是一起提出的，最后也被一起解决；也有结构稍微好一些的，比如S2E1，前期对DAA的inquiry和难民问题都提到了，最后和医院问题一起解决了，皆大欢喜。当然也有YPM S1E3、S2E6那种，主题相对单一的，S2E6就是没办法让Dorothy机械降神来挫败Humphrey和National Threater的计划。
 
-书中的顺序调整：ym把最后两集调整了顺序，
+剧和书的对比也很有趣，但我没法说太多，因为我书没怎么看过，一般都是需要快速查东西会翻一下书。看剧可以看表演、神态、环境，看书能看到Jim的内心活动，一些不方便在剧中展示的背景补充（例如S3E6的anti-terrorist agreement其实并不存在），以及一些paper的展示（可以参看[Calligraphy(note, reply, memo, diary, letter, etc](https://book.douban.com/review/13093243/)）。
 
-ypm也是，最后换成了废除教育部那一集
+额外有趣的是书中对于剧情的顺序调整：YM那本书把S3E3调到了最后一集，说实话我也不知道为什么，大概是希望最后一集是Humphrey吃瘪？YPM也是，剧中最后一集也是Humphrey失言吃瘪，但是书中最后一集换成了废除教育部那一集，对应剧是倒数第二集。也许是为了强调这最后Jim的思考：
 
 > I took a deep breath. Yes, I said quietly. My plans were turning to dust. Like all my plans. Suddenly I saw, with a real clarity that Id never enjoyed before, that although I might win the occasional policy victory, or make some reforms, or be indulged with a few scraps from the table, nothing fundamental was ever ever going to change.
-
-
-
-剧里没有也没法展示的东西：[Calligraphy(note, reply, memo, diary, letter, etc（The Complete Yes Minister）书评](https://book.douban.com/review/13093243/)
-
-剧：表演、神态
-
-书：笔记，内心活动
+> ...
+> All the fight had gone out of me.
 
 
 
