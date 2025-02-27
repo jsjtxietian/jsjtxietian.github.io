@@ -122,6 +122,8 @@ if you are doing any sort of precise timing - physics, animation, sound playback
 - Fixed-point may be old, but it works well for absolute time and position.
 - Help yourself guard against precision-cancellation problems by not exposing absolute time and position to most parts of your app. Any time you think you need them, you're almost certainly going about the problem wrong.
 
+做应用也是一样的，这里就是一个例子：[Vjekoslav Krajačić on X: "Someone reported a bug where File Pilot becomes sluggish after a week of being open. I tried profiling it, but nothing seemed out of order. There was no sign of memory growth or anything like that. It turns out the issue was due to floating point precision, as the program's" / X](https://x.com/vkrajacic/status/1894868543901954072)
+
 
 
 ### 例2，渲染
