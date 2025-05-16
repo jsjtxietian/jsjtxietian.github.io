@@ -287,7 +287,7 @@
 
 .markdown-body p {
   margin-top: 0;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 
 .markdown-body blockquote {
@@ -318,9 +318,14 @@
 }
 
 .markdown-body code {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier,
-    monospace;
-  font-size: 12px;
+  padding: 2px 6px;
+  margin: 0 2px;
+  font-size: 0.9em;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  border-radius: 3px;
+  background-color: var(--bg-text-md-code);
+  color: var(--color-text-md-code);
+  line-height: 1.6;
 }
 
 .markdown-body pre {
@@ -398,19 +403,9 @@
   outline: none;
 }
 
-.markdown-body p,
-.markdown-body blockquote,
-.markdown-body ol,
-.markdown-body dl,
-.markdown-body table,
-.markdown-body pre {
-  margin-top: 0;
-  margin-bottom: 16px;
-}
-
 .markdown-body ul {
-  margin-top: -10px;
-  margin-bottom: 16px;
+  margin-top: 0px;
+  margin-bottom: 8px;
 }
 .markdown-body hr {
   height: 0.25em;
@@ -422,7 +417,8 @@
 
 .markdown-body blockquote {
   /*margin: 3rem 0;*/
-  padding: 15px;
+  padding: 4px 8px;
+  margin-bottom: 4px;
   color: var(--color-block-md-quote);
   border-left: 0.25em solid var(--color-block-md-quote);
   background: var(--bg-block-md-quote);
@@ -457,8 +453,8 @@
 .markdown-body h4,
 .markdown-body h5,
 .markdown-body h6 {
-  margin-top: 24px;
-  margin-bottom: 16px;
+  margin-top: 16px;
+  margin-bottom: 8px;
   font-weight: 600;
   line-height: 1.25;
 }
@@ -529,12 +525,10 @@
 }
 
 .markdown-body h1 {
-  padding-bottom: 0.3em;
   font-size: 2em;
 }
 
 .markdown-body h2 {
-  padding-bottom: 0.3em;
   font-size: 1.5em;
 }
 
@@ -570,6 +564,7 @@
 
 .markdown-body li {
   word-wrap: break-all;
+  line-height: 1.5;
 }
 
 .markdown-body li > p {
@@ -636,16 +631,6 @@
 
 .markdown-body img[align="left"] {
   padding-right: 20px;
-}
-
-.markdown-body code {
-  padding: 3px 5px;
-  margin: 0 2px;
-  font-size: 85%;
-  /* font-weight: 600; */
-  border-radius: 3px;
-  background-color: var(--bg-text-md-code);
-  color: var(--color-text-md-code);
 }
 
 .markdown-body pre {
