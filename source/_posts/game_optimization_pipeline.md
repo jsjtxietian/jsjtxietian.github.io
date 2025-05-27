@@ -43,7 +43,7 @@ date: 2024-10-17
 
 * 代码中尽早准备好相关的接口，可以做到按性能配置加载不同配置的资源、特效等
 * GM开关，可以一键加载或关闭任意UI组件/地图区块/特效等，定位热点资源很有用；信息Panel，显示当前关键的性能数据
-* 内网/本地热更机制 or 类似的加速迭代的机制 or 极快的打包速度，有利于修复性能问题时候的迭代速度
+* 内网/本地热更机制 or 类似的加速迭代的机制 or 极快的打包速度，有利于修复性能问题时候的迭代速度；Quote：[Justine Tunney on X: "@tsoding Feedback on build/run/test is the bottleneck. I spare no expense preserving my ability to rapidly experiment." / X](https://x.com/JustineTunney/status/1921960860777390135)
 * 有一个强大的工具组，开发数个典型的性能测试场景（包括图形、脚本等等），并尽量保持跨版本的稳定性，可以当作性能测试与优化的playground
 * 全自动化的性能对比机制，比如给一个包，指定某个机型，对比其打开关闭某个功能/开关之后的性能，自动形成性能报告提供给开发来分析。方便做某个活动开启 or 关闭的性能分析，或者是某个优化的效果对比。
 
