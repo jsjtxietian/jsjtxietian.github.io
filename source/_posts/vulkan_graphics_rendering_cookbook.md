@@ -158,7 +158,7 @@ while (!glfwWindowShouldClose(window)) {
 ```
 
 * A Vulkan pipeline is an implementation of an abstract graphics pipeline, which is a sequence of operations that transform vertices and rasterize the resulting image. Essentially, **it’s like a single snapshot of a “frozen” OpenGL state**. Vulkan pipelines are mostly immutable, meaning multiple Vulkan pipelines should be created to allow different data paths through the graphics pipeline. 
-* **LightweightVK uses opaque handles to work with resources**, so `lvk::RenderPipelineHandle` is an opaque handle that manages a collection of VkPipeline objects, and `lvk::Holder` is a RAII wrapper that automatically disposes of handles when they go out of scope.
+* **LightweightVK uses opaque handles to work with resources**, so `lvk::RenderPipelineHandle` is an opaque handle that manages a collection of VkPipeline objects, and `lvk::Holder` is a RAII wrapper that automatically disposes of handles when they go out of scope. **详见Chap3 Storing Vulkan Objects**
   * `Handle`这个类型很有意思，模板参数只是用来让Handle变成强类型防止不同资源种类的Handle互相赋值的，注释说了`specialized with dummy structs for type safety`
   * 整个idea来自：[Modern Mobile Rendering @ HypeHype](https://enginearchitecture.realtimerendering.com/downloads/reac2023_modern_mobile_rendering_at_hypehype.pdf)，Handle里面有实际的index和generation counter，实际的数据在Pool里
 * `RenderPipelineDesc`用来描述rendering pipeline，主要包括各个阶段的shader以及enrey point等等，还有Specialization constants，以及其他各种各样的rendering state
@@ -175,7 +175,7 @@ while (!glfwWindowShouldClose(window)) {
 * 最后简单说了下GLM那个demo，演示了下push constant的用法，同样的shader既画cube又画wireframe
 * 最后提了下怎么兼容旧的vulkan，在`RenderPipelineDynamicState`里面加个id，可以去索引到存在`VulkanContext`里的对应的render pass；代码可以看[igl/src/igl/vulkan/RenderPipelineState.h at main · facebook/igl](https://github.com/facebook/igl/blob/main/src/igl/vulkan/RenderPipelineState.h)。
 
-## Working with Vulkan Objects
+## Chap3 Working with Vulkan Objects
 
 第二章看的太累了，第三章要开始有趣起来了。
 
@@ -186,9 +186,13 @@ More specifically, a Vulkan buffer refers to a `VkBuffer` object that is associa
 导入相关的代码就很平铺直叙，没啥可说的；后面绘制模型的部分也是，mvp矩阵是靠push constants机制直接传值，vulkan1.3保证至少有128byte的push constant大小（我自己的3060Ti上是256bytes）；另外画wireframe的时候设置了下depth bias防止明显的flickering。
 
 * buffer三种storage类型： `StorageType_Device`对应GPU的local memory, `StorageType_HostVisible`对应CPU可以读写并且coherent的memory, `StorageType_Memoryless`对应不用来当storage的memory
+
 * 创建buffer的时候要考虑是不是使用staging buffer去把数据拷贝到device-local buffer上；为了用vulkan1.2的buffer device address需要开启`VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT`（**这里代码上有的地方用了这个有的用了_KHR后缀的**）
+
 * `VulkanBuffer`又是一个聚合，所有host visible的buffer都自动map过，直接用cpp的指针更新其内容即可；如果不是coherent的要记得调用`flushMappedMemory`让GPU可以看到CPU更新过的内存，`invalidateMappedMemory`则是反过来的，让GPU写的内存可以被CPU看到，对mobile尤其重要
+
 * 创建buffer的时候也有根据是否使用了VMA的分支代码，不用VMA就是直接使用vulkan；创建的最后会根据flag来判断是否要调用`vmaMapMemory`或者`vkMapMemory`来map地址
+
 * `VulkanContext::destroy(BufferHandle handle)`则要注意生命周期，不能在GPU还在使用buffer的时候就释放buffer，所以把相关过程丢到`deferredTask`里去了，等所有提交过的command buffer都执行完再释放
 
 ### Implementing staging buffers
@@ -213,8 +217,118 @@ More specifically, a Vulkan buffer refers to a `VkBuffer` object that is associa
 
 * The Vulkan image layout is a property of each image subresource that defines how the data in memory is organized in a manner that is opaque to the user and specific to the Vulkan drivers. Correctly specifying the layout for various use cases is crucial; failing to do so can lead to undefined behavior, such as distorted images.
 
-* 这里大量使用了[ldrutils/lutils/ScopeExit.h at master · corporateshark/ldrutils](https://github.com/corporateshark/ldrutils/blob/master/lutils/ScopeExit.h)来延迟一些行为
+* 这里大量使用了[ldrutils/lutils/ScopeExit.h at master · corporateshark/ldrutils](https://github.com/corporateshark/ldrutils/blob/master/lutils/ScopeExit.h)来延迟一些行为，像是go的`defer`
 
 * 最后提了一句ReBar，推荐了[Vulkan Memory Types on PC and How to Use Them](https://asawicki.info/news_1740_vulkan_memory_types_on_pc_and_how_to_use_them)
 
 ### Using texture data in Vulkan
+
+A Vulkan image is a type of object backed by memory, designed to store 1D, 2D, or 3D images, or arrays of these images.
+
+Demo展示了下基于bindless的渲染，Bindless rendering is a technique that enables more efficient GPU resource management by eliminating the need to explicitly bind resources like textures, buffers, or samplers. 提了一嘴`kTextures2D[]`和`kSamplers[]`的0号元素都是dummy, prevent sparse arrays in GLSL shaders and ensure that all shaders can safely sample non-existing textures.
+
+* `TextureDesc`的介绍，`createTexture`的debugName可以覆盖`TextureDesc`自己的debugName，`dataNumMipLevels`指定了想要upload的mimap的数量，`generateMipmaps`则代表需要强制生成mipmap
+
+* `createTexture`上来先把LightweightVK的图片格式转到vulkan的图片格式，depth format那边找最近的，color format则11对应；冗长的错误处理之后，开始加flag，`VK_IMAGE_USAGE_TRANSFER_DST_BIT`之类，为了方便给除了Memoryless的image都加上了从GPU回读的flag：`VK_IMAGE_USAGE_TRANSFER_SRC_BIT`；设置一些友好的debugName；提了一嘴MSAA的支持，chap10会讲
+
+* 然后创建`VulkanImage`，解释了下`getOrCreateVkImageViewForFramebuffer`，Image views used as framebuffer attachments should have only 1 mip-level and 1 layer, this function precaches such image views inside the array `imageViewForFramebuffer_[][]`，it supports a maximum of 6 layers, which is just enough for rendering to the faces of a cube map
+
+* 然后开始填`VkImageCreateInfo`，这里也有代码处理multiplanar image；另外sharing mode都是EXCLUSIVE，因为lightweight vk本身不考虑跨多个vulkan queue；接着就是根据是否使用VMA的分支，使用VMA并且图片numPlanes为1就很简单，不然有点复杂，memory can only be bound to a VkImage once. Therefore, the code handles binding disjoint memory locations in a single call to vkBindMemory2() by chaining everything together using pNext pointers. 后面再研究（估计也不需要研究）
+
+* 开始创建`VkImageView`，Vulkan images can have multiple aspects simultaneously, such as combined depth-stencil images, where depth and stencil bits are handled separately. Additionally, Vulkan supports image view component swizzling. An image view can control which mip-levels and layers are included. Here, we create an image view that includes all levels and layers of the image. 后续需要给framebuffer attachments创建单独的image views，只有一层layer和一个mipmap；Storage images因为不支持swizzling， 所以也单独有自己的image view.
+
+* 创建完毕设置`awaitingCreation_`为true，指示后续去更新bindless descriptor set；`createImageView`那边没啥神秘的
+
+* `VulkanContext::destroy(lvk::TextureHandle handle)`提了下，主要是销毁顺序和时机，也是大量使用`SCOPE_EXIT`和`deferredTask`；也考虑到了`isOwningVkImage_`相关的逻辑，如果为false则不去销毁` VkImage`和`VkDeviceMemory`，false的主要用途是，allows us to create as many non-owning copies of a VulkanImage object as we need, which is very useful when we want to create multiple custom image views of the same VkImage
+
+### Storing Vulkan objects
+
+详细讲之前隐约提到过的handle系统了，值类型的handle确实好，作为64位的整数可以随便到处传，也不用付出shared_ptr那样atomic的开销。idea来自：[AaltonenHypeHypeAdvances2023.pdf](https://advances.realtimerendering.com/s2023/AaltonenHypeHypeAdvances2023.pdf) 
+
+```cpp
+template<typename ObjectType>
+class Handle final {
+ public:
+  Handle() = default;
+  bool empty() const { return gen_ == 0;}
+  bool valid() const { return gen_ != 0;}
+  uint32_t index() const { return index_;}
+  uint32_t gen() const { return gen_; }
+  void* indexAsVoid() const { 
+      return reinterpret_cast<void*>(static_cast<ptrdiff_t>(index_));
+  }
+  bool operator==(const Handle<ObjectType>& other) const {...}
+  bool operator!=(const Handle<ObjectType>& other) const {...}
+  explicit operator bool() const { return gen_ != 0; }
+
+ private:
+  Handle(uint32_t index, uint32_t gen) : index_(index), gen_(gen){};
+  template<typename ObjectType_, typename ImplObjectType>
+  friend class Pool;
+
+  uint32_t index_ = 0;
+  uint32_t gen_ = 0;
+};
+
+static_assert(sizeof(Handle<class Foo>) == sizeof(uint64_t));
+```
+
+* handle只能被friend class pool去构造，Pool的声明中的类型不定义没关系，这里只是声明一下是友元
+* `indexAsVoid`是把数据传给第三方库用的，比如imgui
+* 还补了一个assert来保证是8byte，猜测是防止意外塞入虚函数或者奇怪的对齐规则
+* 前文提过Handle<> template还被加了tag，防止不同类型的handle可以互相赋值
+
+Handles do not own objects they point to. Only the Holder<> class does. 我个人理解，**Handle就是个POD类型，Holder是基于之上的RAII类型**，有点像是std::unique_ptr，只能move
+
+```c++
+~Holder() {
+  lvk::destroy(ctx_, handle_);
+}
+Holder& operator=(std::nullptr_t) { reset(); return *this; }
+```
+
+现在还看不到IContext的声明，所以先前向声明`lvk::destory`将就用
+
+**Pool: stores a collection of objects of type ImplObjectType inside std::vector and can manage handles to these objects.** The LightweightVK implementation in VulkanContext uses them to store all implementation-specific objects that are accessible by handles from the interface side.
+
+vector里存了PoolEntry，带着generation信息，以及freelist要用的字段。Note里提了可以做冷热分离啥的，为了简单起见略过了。这里create和PoolEntry都只接受R-value reference. 
+
+```c++
+struct PoolEntry {
+  explicit PoolEntry(ImplObjectType& obj) : obj_(std::move(obj)) {}
+  ImplObjectType obj_ = {};
+  uint32_t gen_ = 1;
+  uint32_t nextFree_ = kListEndSentinel;
+};
+```
+
+### Using Vulkan descriptor indexing
+
+好东西！This feature allows applications to place all their resources into one large descriptor set and make it available to all shaders. There’s no need to manage descriptor pools or construct per-shader descriptor sets. The Vulkan descriptor indexing feature enables descriptor sets to be updated after they have been bound.
+
+`VulkanContext`里就有descriptor set相关的字段，同时`lastSubmitHandle_`其实就是最近用这个descriptor set的提交。
+
+* `growDescriptorPool`，先检查`maxTextures`和`maxSamplers`是不是超过了硬件支持的大小，然后destory旧的descriptor set，再创建新的descriptor set layout给所有pipeline共用，记加上`CREATE_UPDATE_AFTER_BIND_BIT`，最后创建`vkDSet_`
+* `checkAndUpdateDescriptorSets`用来更新descriptor set，先检查`awaitingCreation_`，然后开始填`VkDescriptorImageInfo`，提了一嘴Multisampled images can only be accessed from shaders using texelFetch(), which is not supported by LightweightVK. 最后因为要更新整个descriptor set，要注意等一下上次的submithandle，保证vulkan没有在用。
+
+shader里面插入的bindless descriptor set大概这样：
+
+```glsl
+layout(set = 0, binding = 0) uniform texture2D kTextures2D[];
+layout(set = 1, binding = 0) uniform texture3D kTextures3D[];
+layout(set = 2, binding = 0) uniform textureCube kTexturesCube[];
+layout(set = 3, binding = 0) uniform texture2D kTextures2DShadow[];
+layout(set = 0, binding = 1) uniform sampler kSamplers[];
+layout(set = 1, binding = 1) uniform samplerShadow kSamplersShadow[];
+
+vec4 textureBindless2D(uint textureid, uint samplerid, vec2 uv) {
+  return texture(nonuniformEXT(sampler2D(
+    kTextures2D[textureid], kSamplers[samplerid])), uv);
+}
+```
+
+虽然set的id看着不同，但是其实是同一个，为了兼容MoltenVK才写成这样。
+
+最后提了两个优化点：1，可以use a couple of round-robin descriptor sets and switch between them, eliminating the need for the heavy wait() function call before writing descriptor sets；2，perform incremental updates of descriptor sets，可以看下`VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT`
+
+## Adding User Interaction and Productivity Tools
