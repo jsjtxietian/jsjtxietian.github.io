@@ -332,3 +332,66 @@ vec4 textureBindless2D(uint textureid, uint samplerid, vec2 uv) {
 最后提了两个优化点：1，可以use a couple of round-robin descriptor sets and switch between them, eliminating the need for the heavy wait() function call before writing descriptor sets；2，perform incremental updates of descriptor sets，可以看下`VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT`
 
 ## Adding User Interaction and Productivity Tools
+
+比较轻松的一章，加点外围的基础设置。
+
+### Rendering ImGui user interfaces
+
+抽象也比较干净：
+
+```c++
+std::unique_ptr<lvk::ImGuiRenderer> imgui = std::make_unique<lvk::ImGuiRenderer>(*ctx, "data/OpenSans-Light.ttf", 30.0f);
+// inside render loop
+imgui->beginFrame(framebuffer);
+ImGui::Begin("Texture Viewer", nullptr, ImGuiWindowFlags_AlwaysAutoResize); 
+ImGui::Image(texture.index(), ImVec2(512, 512)); // pass index be used with the bindless rendering
+ImGui::ShowDemoWindow();
+ImGui::End();
+imgui->endFrame(buf);
+```
+
+简单讲了下`ImGuiRenderer`这个类，就是一些imgui渲染需要的东西，有个3个`DrawableData`，To ensure stall-free operation, LightweightVK uses multiple buffers to pass ImGui vertex and index data into Vulkan.
+
+ imgui用的shader是写在HelpersImGui.cpp里的：
+
+```glsl
+struct Vertex {
+  float x, y;  float u, v;  uint rgba;
+};
+
+layout(std430, buffer_reference) readonly buffer VertexBuffer {
+  Vertex vertices[];
+};
+
+layout(push_constant) uniform PushConstants {
+  vec4 LRTB;
+  VertexBuffer vb;
+  uint textureId;  
+  uint samplerId;
+} pc;
+```
+
+The buffer_reference GLSL layout qualifier declares a type and not an instance of a buffer, 这里依赖`GL_EXT_buffer_reference`，把gpu buffer address用push constant传进来，LTRB指的是2d viewport orthographic projection的一些参数，用来在vertex shader拼projection矩阵，颜色用`unpackUnorm4x8`解回vec4
+
+* `createNewPipelineState`比较简单，注意一下sRBG的模式作为specialization constant传给shader；`updateFont`则是处理字体贴图相关的逻辑；构造函数里就是正常的初始化，加了`ImGuiBackendFlags_RendererHasVtxOffset`来提升性能
+* `beginFrame`里创建vulkan pipeline；`endFrame`逻辑比较多，实际录制需要的command；按需创建新的vb和ib，注意vb因为shader里用了programmable vertex pulling所以类型是`BufferUsageBits_Storage`，buffer上传的时候因为buffer都是host visibie，所以直接memcpy；后续还有viewport clip，scissor test等等, use both the index offset and vertex offset parameters to access the correct data in our large per-frame vertex and index buffers
+
+### Integrating Tracy & Using Tracy GPU profiling
+
+讲讲tracy的集成，一些cmake和宏定义，`LVK_PROFILER_FRAME`会在`lvk::VulkanSwapchain::present()`被调用，标志一帧的结束。demo跑起来有点问题，提了[Issue #29](https://github.com/PacktPublishing/3D-Graphics-Rendering-Cookbook-Second-Edition/issues/29)
+
+GPU profiling更有趣一些，依赖`VK_EXT_calibrated_timestamps`。初始化那边也是比较全面，考虑了各种fallback，checks the available Vulkan time domains and enables different Tracy GPU profiling features based on their availability.
+
+cpp小trick，这里用lambda的好处是可以让`hasHostQuery`变成const:
+
+```cpp
+const bool hasHostQuery = vkFeatures12_.hostQueryReset && [&timeDomains]() -> bool {
+   for (VkTimeDomainEXT domain : timeDomains)
+   if (domain == VK_TIME_DOMAIN_CLOCK_MONOTONIC_RAW_EXT || domain == VK_TIME_DOMAIN_QUERY_PERFORMANCE_COUNTER_EXT)
+      return true;
+   return false;
+}();
+```
+
+
+
