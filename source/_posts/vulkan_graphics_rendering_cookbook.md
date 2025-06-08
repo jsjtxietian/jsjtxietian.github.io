@@ -329,6 +329,8 @@ vec4 textureBindless2D(uint textureid, uint samplerid, vec2 uv) {
 
 虽然set的id看着不同，但是其实是同一个，为了兼容MoltenVK才写成这样。
 
+nonuniformEXT见：[GLSL/extensions/ext/GL_EXT_nonuniform_qualifier.txt at main · KhronosGroup/GLSL](https://github.com/KhronosGroup/GLSL/blob/main/extensions/ext/GL_EXT_nonuniform_qualifier.txt)  不加会有问题，这是non-uniform acess
+
 最后提了两个优化点：1，可以use a couple of round-robin descriptor sets and switch between them, eliminating the need for the heavy wait() function call before writing descriptor sets；2，perform incremental updates of descriptor sets，可以看下`VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT`
 
 ## Adding User Interaction and Productivity Tools
@@ -374,13 +376,13 @@ layout(push_constant) uniform PushConstants {
 The buffer_reference GLSL layout qualifier declares a type and not an instance of a buffer, 这里依赖`GL_EXT_buffer_reference`，把gpu buffer address用push constant传进来，LTRB指的是2d viewport orthographic projection的一些参数，用来在vertex shader拼projection矩阵，颜色用`unpackUnorm4x8`解回vec4
 
 * `createNewPipelineState`比较简单，注意一下sRBG的模式作为specialization constant传给shader；`updateFont`则是处理字体贴图相关的逻辑；构造函数里就是正常的初始化，加了`ImGuiBackendFlags_RendererHasVtxOffset`来提升性能
-* `beginFrame`里创建vulkan pipeline；`endFrame`逻辑比较多，实际录制需要的command；按需创建新的vb和ib，注意vb因为shader里用了programmable vertex pulling所以类型是`BufferUsageBits_Storage`，buffer上传的时候因为buffer都是host visibie，所以直接memcpy；后续还有viewport clip，scissor test等等, use both the index offset and vertex offset parameters to access the correct data in our large per-frame vertex and index buffers
+* `beginFrame`里创建vulkan pipeline；`endFrame`逻辑比较多，实际录制需要的command；按需创建新的vb和ib，注意vb因为shader里用了programmable vertex pulling所以类型是`BufferUsageBits_Storage`，buffer上传的时候因为buffer都是host visibie，所以直接memcpy，而且因为是vertex pulling所以也不需要给render pipeline传vertexInput；后续还有viewport clip，scissor test等等, use both the index offset and vertex offset parameters to access the correct data in our large per-frame vertex and index buffers
 
 ### Integrating Tracy & Using Tracy GPU profiling
 
 讲讲tracy的集成，一些cmake和宏定义，`LVK_PROFILER_FRAME`会在`lvk::VulkanSwapchain::present()`被调用，标志一帧的结束。demo跑起来有点问题，提了[Issue #29](https://github.com/PacktPublishing/3D-Graphics-Rendering-Cookbook-Second-Edition/issues/29)
 
-GPU profiling更有趣一些，依赖`VK_EXT_calibrated_timestamps`。初始化那边也是比较全面，考虑了各种fallback，checks the available Vulkan time domains and enables different Tracy GPU profiling features based on their availability.
+GPU profiling更有趣一些，初始化那边比较全面，考虑了各种fallback，checks the available Vulkan time domains and enables different Tracy GPU profiling features based on their availability.
 
 cpp小trick，这里用lambda的好处是可以让`hasHostQuery`变成const:
 
@@ -393,5 +395,60 @@ const bool hasHostQuery = vkFeatures12_.hostQueryReset && [&timeDomains]() -> bo
 }();
 ```
 
+如果设备支持host querying，就只初始化`tracyVkCtx_`即可，不需要额外的command buffer，不然就也要自己创建，然后根据设备是不是支持 calibrated timestamp（`VK_EXT_calibrated_timestamps`）分别初始化。代码就按宏`LVK_WITH_TRACY_GPU`看就行了，比较直接。
 
+FPS那节太无聊了略过。
+
+### Using cube map textures in Vulkan
+
+A useful property of cube maps is that they can be sampled using a direction vector. We can store the diffuse part of the physically based lighting equation in an **irradiance cube map**.
+
+Cube maps are often stored as **equirectangular projections**. The equirectangular projection is such a projection that maps longitude and latitude (vertical and horizontal lines) to straight, even lines, making it a very easy and popular way to store light probe images.
+
+先介绍了`Bitmap`类，可以用来封装8bit或者float类型的bitmap。`comp_`代表number of components per pixel，用了函数指针来抽象不同数据类型的bitmap的操作。
+
+讲了下从equirectangular到cube map的转换，正确的方法是按cube map的像素去采样equirectangular图（bilinear interpolation），而不是反过来，反过来会有摩尔纹。
+
+`faceCoordsToXYZ`用来把cube map上表面像素坐标转化为方向向量（立方体表面上的一点）
+
+`convertEquirectangularMapToVerticalCross`把一个 equirectangular 转换为一个 vertical cross 格式的cube map，`kFaceOffsets`代表每个面在数据中的偏移位置，后面把从`faceCoordsToXYZ`拿到的方向向量转到[球面坐标](https://en.wikipedia.org/wiki/Spherical_coordinate_system)，然后再映射到equirectangular内的坐标，做双线性插值得到颜色。
+
+`convertVerticalCrossToCubeMapFaces`则最后转成tightly packed rectangular cube map faces, the resulting cube map contains an array of six 2D images. 这俩函数不合成一个我猜是因为可以把vertical cross的保存下来debug用。
+
+最后讲demo的代码，读取hdr文件用的是`stbi_loadf`，就是正常上传，`cerateTexture`内部处理好了相关逻辑。
+
+skybox的shader我看了下，就是构造了一个单位立方体，vertex里算的时候：`gl_Position = pc.proj * mat4(mat3(pc.view)) * vec4(1.0 * pos[idx], 1.0)`把view矩阵的平移部分去掉了，因为skybox本来也不会移动，后面算了下direction传给frag，frag就是采样一下。
+
+渲染小黄鸭的shader也不复杂，注意vertexshader里变换法线：`mat3 normalMatrix = transpose( inverse(mat3(pc.model)) )`，其他都没啥，正常的shader。
+
+### Working with a 3D camera & Adding camera animations and motion
+
+`CameraPositioner_FirstPerson`讲了下怎么实现第一人称相机，主要是鼠标、键盘交互以及四元数旋转的一些操作，比如从鼠标的屏幕空间移动算出相机本身应该旋转多少，从view矩阵（四元数）得到forward、right、up，怎么得到view等。demo的代码和cube map那一章一样，只是view和cameraPos从写死的变成了外面传入的。
+
+`CameraPositioner_MoveTo`则是一个可以被imgui控制坐标和朝向的相机，基本原理也差不多，这次不用四元数了直接存欧拉角（imgui控件上调整的是欧拉角）。注意移动到目标位置还带上damping效果，欧拉角要记得clip一下，防止旋转时候不走最短路径，以及防止角度无限增长。
+
+### Implementing an immediate-mode 3D drawing canvas & Rendering on-screen graphs
+
+讲`LineCanvas3D`的一节，The LineCanvas3D class has its internal 3D line representation as a pair of vertices for each and every line, whereas each vertex consists of a vec4 position and a color. 除了线还有plane、box、视锥frustum这样的primitives. 
+
+* plane是n * n的那种网格，box需要传入model matrix。视锥更复杂一些，先定义好8个corner点（NDC空间下），然后用提供的view-projection矩阵的逆矩阵转换一下，转到视锥的形状，然后划线。
+* `render`函数就是很正常的感觉，也是programmable vertex pulling，用push constant把mvp矩阵和gpu buffer地址传进去
+
+后一节讲了下`LineCanvas2D`，就简单很多，`render`函数纯粹依赖于imgui的基础设施，先画个full-screen ImGui window with all decorations removed and user input disabled，然后直接往drawlist里塞line
+
+`LinearGraph`则是基于ImPlot画图用的，可以用来画FPS图。`renderGraph`里面要先确定极值，这样可以normalize一下图表，然后imgui画个window，在里面ImPlot画图。
+
+### Putting it all together into a Vulkan application
+
+主要是VulkanApp的抽象，VulkanApp.h header provides a wrapper for LightweightVK context creation and GLFW window lifetime management. 还自带了个first-person camera, context可以从VulkanApp要。
+
+Run the main loop using a lambda provided by the `VulkanApp::run()` method.
+
+## Chap5 Working with Geometry Data
+
+要开始进入复杂一些的话题了。
+
+### Generating level-of-detail meshes using MeshOptimizer
+
+MeshOptimizer provides algorithms to help optimize meshes for modern GPU vertex and index processing pipelines. It can reindex an existing index buffer or generate an entirely new set of indices from an unindexed vertex buffer.
 
