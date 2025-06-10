@@ -448,7 +448,94 @@ Run the main loop using a lambda provided by the `VulkanApp::run()` method.
 
 要开始进入复杂一些的话题了。
 
-### Generating level-of-detail meshes using MeshOptimizer
+### Generating level-of-detail meshes using MeshOptimizer & Implementing programmable vertex pulling
 
-MeshOptimizer provides algorithms to help optimize meshes for modern GPU vertex and index processing pipelines. It can reindex an existing index buffer or generate an entirely new set of indices from an unindexed vertex buffer.
+MeshOptimizer provides algorithms to help optimize meshes for modern GPU vertex and index processing pipelines. It can reindex an existing index buffer or generate an entirely new set of indices from an unindexed vertex buffer. 按顺序：
+
+* 用`meshopt_generateVertexRemap`生成remap table
+* `meshopt_remapIndexBuffer`和`meshopt_remapVertexBuffer`一套组合拳
+* 用`meshopt_optimizeVertexCache`来优化（讨论见[Shaded vertex reuse on modern GPUs – Interplay of Light](https://interplayoflight.wordpress.com/2021/11/14/shaded-vertex-reuse-on-modern-gpus/)）文档上说是Reorders indices to reduce the number of GPU vertex shader invocations，应该是最大化 GPU 的 Post-Transform Vertex Cache 命中率
+* 用`meshopt_optimizeOverdraw`来优化overdraw（理论上需要view-dependent的算法，没看过具体实现原理），Reorders indices to reduce the number of GPU vertex shader invocations and the pixel overdraw
+* 用`meshopt_optimizeVertexFetch`来优化vertex fetch的效率，Reorders vertices and changes indices to reduce the amount of GPU memory fetches during vertex processing，主要是优化vertex buffer的局部性
+* 最后用`meshopt_simplify`生成不同lod的顶点数据，generate a new index buffer that uses existing vertices from the vertex buffer with a reduced number of triangles.
+
+demo的渲染很简单，就是生成俩index buffer，一个给mesh，然后画
+
+**programmable vertex pulling (PVP)**: By combining multiple meshes into a single buffer and rendering them with a single draw call, developers could avoid rebinding vertex arrays or buffer objects, significantly improving draw call batching. This technique enables merge-instancing, where multiple small meshes are combined into a larger one to be processed as part of the same batch. 具体性能考虑可以参考 [nlguillemot/ProgrammablePulling: Programmable pulling experiments (based on OpenGL Insights "Programmable Vertex Pulling" article by Daniel Rakos)](https://github.com/nlguillemot/ProgrammablePulling)
+
+PVP的demo也很简单，之前已经大概提过这个了，主要是vertex buffer的usage flag要设成`BufferUsageBits_Storage`而不是`BufferUsageBits_Vertex`，然后push constants把buffer地址传进去。
+
+注意这一章wireframe换了个画法，从原来走push constant，换成了用geometry shader算下每个像素的barycoords，根据这个来显示三角形边缘。
+
+### Rendering instanced geometry & with compute shaders
+
+用`gl_InstanceIndex` ，can be used to fetch material properties, transformations, and other data directly  from buffers.
+
+Demo是渲染100万个旋转方块，每个都有自己的位置、旋转角度。CPU这边初始化了100万个方块的vec3 positions and float initial rotation angles，也就是100万个vec4进 immutable storage buffer。其他就是`cmdDraw`除了传顶点数量，再传个instance数量。
+
+vertex shader里定义了index数组和vertex数组，还因为要在shader里自己做矩阵运算，定义了translate和rotate，对应到glm::的相关函数。注意这里用uvec2来代表uint64的数据类型：
+
+```glsl
+layout(push_constant) uniform PerFrameData {
+	mat4 viewproj;
+	uint textureId;
+	uvec2 bufId;
+	float time;
+};
+layout(std430, buffer_reference) readonly buffer Positions {
+  vec4 pos[]; // pos, initialAngle
+};
+// inside main():
+vec4 center = Positions(bufId).pos[gl_InstanceIndex];
+```
+
+文档见：[Buffer device address :: Vulkan Documentation Project](https://docs.vulkan.org/samples/latest/samples/extensions/buffer_device_address/README.html)  之前imgui的demo是直接把VertexBuffer放进 push constant。
+
+vertex shader其他部分就是继续拼cube，算出frag shader要用的东西。
+
+后一个demo是把矩阵计算给compute shader去做，矩阵的buffer有两个，在奇数偶数帧会轮换着使用，避免不必要的同步。注意push constant因为是per VkPipelineLayout，所以compute和graphics都要push一次（这里是共享一样的结构，所以推的同一份数据）。
+
+`cmdDispatchThreadGroups`来dispatch compute shader，每个local workgroup设置为处理32个mesh。`cmdBeginRendering`里传了compute shader的buffer作为dependency，会自动去设置barrier。
+
+### Implementing an infinite grid GLSL shader & tessellationpipeline
+
+灵感来源于：[Borderland between Rendering and Editor - Part 1 · Our Machinery](https://ruby0x1.github.io/machinery_blog_archive/post/borderland-between-rendering-and-editor-part-1/index.html)，最后也推荐了 [The Best Darn Grid Shader (Yet)](https://bgolus.medium.com/the-best-darn-grid-shader-yet-727f9278b9d8)
+
+讲了讲实现，主要是shader部分。Our grid implementation will adjust the number of rendered lines based on the grid LOD. We will switch the LOD when the number of pixels between two adjacent grid cell lines drops below a certain threshold, which is calculated in the fragment shader. 
+
+vertex shader里比较简单，就是变换一下坐标，the -1 to +1 points are scaled by the desired grid size. The resulting vertex position is then translated by the 2D camera position in the horizontal plane and, finally, by the 3D origin position.
+
+fragment shader更为复杂，calculates a programmatic texture that resembles a grid. The grid lines are rendered based on how quickly the UV coordinates change in screen space to avoid the Moiré pattern.
+
+不继续研究了，就记一下有这个东西。
+
+
+
+讲tessellation的，Hardware tessellation consists of two new shader stages in the graphics pipeline. The first stage is called the **tessellation control shader** (TCS), and the second is the **tessellation evaluation shader** (TES). Note里说了they may not be
+as efficient as using mesh shaders on modern GPUs，哈哈...
+
+不继续研究了，记一下推荐的 [OpenGL 4 Tessellation With Displacement Mapping | Geeks3D](https://www.geeks3d.com/20100804/test-opengl-4-tessellation-with-displacement-mapping/) 以及GPU gems2的Chapter 7. Adaptive Tessellation of Subdivision Surfaces with Displacement Mapping
+
+### Organizing mesh data storage
+
+这章认真看！Let’s define a **LOD** as an index buffer of reduced size that uses existing vertices and hence can be used directly for rendering with the original vertex buffer. We define a **mesh** as a collection of all vertex data streams and a collection of all index buffers, one for each LOD. 
+
+目前为了简单，都用32bit的offset和index；所有数据都塞到一个blob里，就可以直接一个fread或者mmap把所有数据加载进来。这一节主要是专注于几何数据的处理。Mesh的结构基于offset来做：
+
+```cpp
+// All offsets are relative to the beginning of the data block (excluding headers with a Mesh list)
+struct Mesh final {
+  // Number of LODs in this mesh. Strictly less than MAX_LODS, last LOD offset is used as a marker only
+  uint32_t lodCount = 1;
+  uint32_t indexOffset = 0;   // The total count of all previous vertices in this mesh file
+  uint32_t vertexOffset = 0;
+  uint32_t vertexCount = 0;   // Vertex count (for all LODs)
+  // Offsets to LOD indices data. The last offset is used as a marker to calculate the size
+  uint32_t lodOffset[kMaxLODs + 1] = { 0 };
+  uint32_t materialID = 0;
+  inline uint32_t getLODIndicesCount(uint32_t lod) const { return lod < lodCount ? lodOffset[lod + 1] - lodOffset[lod] : 0; }
+};
+```
+
+每个lod的index buffer不会单独存，都是从offset算出来的，`lodOffset`多存一个方便算最后一个LOD的size，见`getLODIndicesCount`；
 
