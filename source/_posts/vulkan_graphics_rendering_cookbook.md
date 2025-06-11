@@ -525,8 +525,7 @@ as efficient as using mesh shaders on modern GPUs，哈哈...
 ```cpp
 // All offsets are relative to the beginning of the data block (excluding headers with a Mesh list)
 struct Mesh final {
-  // Number of LODs in this mesh. Strictly less than MAX_LODS, last LOD offset is used as a marker only
-  uint32_t lodCount = 1;
+  uint32_t lodCount = 1;    // Number of LODs in this mesh.
   uint32_t indexOffset = 0;   // The total count of all previous vertices in this mesh file
   uint32_t vertexOffset = 0;
   uint32_t vertexCount = 0;   // Vertex count (for all LODs)
@@ -537,5 +536,69 @@ struct Mesh final {
 };
 ```
 
-每个lod的index buffer不会单独存，都是从offset算出来的，`lodOffset`多存一个方便算最后一个LOD的size，见`getLODIndicesCount`；
+每个lod的index buffer不会单独存，都是从offset算出来的，`lodOffset`多存一个方便算最后一个LOD的size，见`getLODIndicesCount`。 MeshData就很直接：
+
+```cpp
+struct MeshData {
+  lvk::VertexInput streams = {};
+  std::vector<uint32_t> indexData;
+  std::vector<uint8_t> vertexData;
+  std::vector<Mesh> meshes;
+  std::vector<BoundingBox> boxes;
+  std::vector<Material> materials;
+  std::vector<std::string> textureFiles;
+  // ...
+};
+```
+
+`VertexInput`就是vertex stream的格式，里面记录了`VkVertexInputAttributeDescription`和`VkVertexInputBindingDescription`要用的数据。注意这里其实没区分vertex数据要不要interleave，代码上是都支持的，实际上需要profile了再看哪个好。
+
+读取代码就很直截了当，有个练习是可以把index buffer和vertex buffer也合成一个。
+
+### Implementing automatic geometry conversion
+
+吐槽了下第一版的书把mesh转换工具做成单独的，结果很多读者直接跑demo没跑转换工具，发现有问题，这一版做成了和demo一起，按需转mesh。
+
+Demo里有个`convertAIMesh`的函数，把assimp的mesh转化为上一节介绍的格式。position存储格式是vec3，uv是half的vec2（感觉16 bit unorm UVs更好）用`packHalf2x16`打包，normal用`packSnorm3x10_1x2`打包成2_10_10_10_REV。用`put`函数往vector里写：
+
+```cpp
+template <typename T> inline void put(std::vector<uint8_t>& v, const T& value)
+{
+  const size_t pos = v.size();
+  v.resize(v.size() + sizeof(value));
+  memcpy(v.data() + pos, &value, sizeof(value));
+}
+```
+
+`loadMeshFile`比较简单，给`aiImportFile`加了一大堆flag之后加载mesh，然后初始化meshData，调用`convertAIMesh`，最后算下AABB。`saveMeshData`就更直接了。
+
+### Indirect rendering in Vulkan
+
+Indirect rendering is the process of issuing drawing commands to the graphics API, where most of the parameters to those commands come from GPU buffers. We create a GPU buffer and fill it with an array of `VkDrawIndirectCommand` structures, then fill these structures with appropriate offsets into our index and vertex data buffers, and finally emit a single `vkCmdDrawIndirect()` call.
+
+讲了一下`VkMesh`这个类，构造函数是大头，正常地准备一些mesh用的index和vertex buffer之后，开始准备indirect buffer，注意这里的std::launder怪怪的，感觉似乎没必要：
+
+```cpp
+std::vector<uint8_t> drawCommands;
+drawCommands.resize(sizeof(DrawIndexedIndirectCommand) * numCommands + sizeof(uint32_t));
+// store the number of draw commands in the very beginning of the buffer
+memcpy(drawCommands.data(), &numCommands, sizeof(numCommands));
+DrawIndexedIndirectCommand* cmd = std::launder(reinterpret_cast<DrawIndexedIndirectCommand*>(drawCommands.data() + sizeof(uint32_t)));
+```
+
+indirect buffer最开始存draw command的数量，虽然这个demo里用不到（给以后用的，可以让GPU来算draw command的数量然后存到buffer里）。`DrawIndexedIndirectCommand`和`VkDrawIndexedIndirectCommand`基本一模一样，结构是这样：
+
+```cpp
+struct DrawIndexedIndirectCommand {
+  uint32_t count;
+  uint32_t instanceCount;
+  uint32_t firstIndex;
+  int32_t baseVertex;
+  uint32_t baseInstance;
+};
+```
+
+shader都相对简单，没用pvp，和之前一样的shader。
+
+### Generating textures in Vulkan using compute shaders
 
