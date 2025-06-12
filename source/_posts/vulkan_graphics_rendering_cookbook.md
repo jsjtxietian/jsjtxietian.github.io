@@ -553,9 +553,9 @@ struct MeshData {
 
 `VertexInput`就是vertex stream的格式，里面记录了`VkVertexInputAttributeDescription`和`VkVertexInputBindingDescription`要用的数据。注意这里其实没区分vertex数据要不要interleave，代码上是都支持的，实际上需要profile了再看哪个好。
 
-读取代码就很直截了当，有个练习是可以把index buffer和vertex buffer也合成一个。
+读取代码就很直截了当，有个练习是可以把index buffer和vertex buffer也合成一个。最后提了下这个适合存static mesh，如果有比如reload、异步加载等等的需求，最好还是分开存放。也提了一些后续篇章会处理的问题，是不是要把material也存进去，更进一步，texture是不是也要存进去等等。
 
-### Implementing automatic geometry conversion
+### Implementing automatic geometry conversion & Indirect rendering in Vulkan
 
 吐槽了下第一版的书把mesh转换工具做成单独的，结果很多读者直接跑demo没跑转换工具，发现有问题，这一版做成了和demo一起，按需转mesh。
 
@@ -572,7 +572,7 @@ template <typename T> inline void put(std::vector<uint8_t>& v, const T& value)
 
 `loadMeshFile`比较简单，给`aiImportFile`加了一大堆flag之后加载mesh，然后初始化meshData，调用`convertAIMesh`，最后算下AABB。`saveMeshData`就更直接了。
 
-### Indirect rendering in Vulkan
+
 
 Indirect rendering is the process of issuing drawing commands to the graphics API, where most of the parameters to those commands come from GPU buffers. We create a GPU buffer and fill it with an array of `VkDrawIndirectCommand` structures, then fill these structures with appropriate offsets into our index and vertex data buffers, and finally emit a single `vkCmdDrawIndirect()` call.
 
@@ -600,5 +600,42 @@ struct DrawIndexedIndirectCommand {
 
 shader都相对简单，没用pvp，和之前一样的shader。
 
-### Generating textures in Vulkan using compute shaders
+### Generating textures in Vulkan using compute shaders & Implementing computed meshes
 
+迁移这个[Industrial Complex](https://www.shadertoy.com/view/MtdSWS)到vulkan demo里，当然首先要自己加一些输入输出：
+
+```glsl
+layout(local_size_x = 16, local_size_y = 16) in;
+layout(set = 0, binding = 2, rgba8) uniform writeonly image2D kTextures2DOut[];
+```
+
+`image2D`代表了`kTextures2DOut`里面存的都是texture的pixel，给compute shader写出图像用的，image的id和当前时间就从push constant里拿。用`gl_GlobalInvocationID.xy / dim`拿到uv开始算，然后`imageStore`写回。算法上就是把`mainImage`的参数改了改，然后自己在`main`里写了个5x5的antialiasing。
+
+C++那边，texture创建的时候要给`TextureUsageBits_Storage`，这样compute shader才能访问到；然后这个texture作为依赖传给了`cmdBeginRendering`，保证在shader里采样这个贴图之前compute shader已经跑完了，具体的函数在`transitionToShaderReadOnly`里，加pipeline barrier来转image layout。
+
+vertex和frag shader则是基于这个[Rendering a fullscreen quad without buffers](https://www.saschawillems.de/blog/2016/08/13/vulkan-tutorial-on-rendering-a-fullscreen-quad-without-buffers/) 的一个全屏shader:
+
+```glsl
+void main() {
+  uv = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
+  gl_Position = vec4(uv * 2.0 + -1.0, 0.0, 1.0);
+}
+```
+
+很聪明，只需要三个顶点，也不需要设置vbo啥的。
+
+
+
+用compute写个这个[Torus knot - Wikipedia](https://en.wikipedia.org/wiki/Torus_knot)，我不去研究具体的算法，而是看compute shader怎么去生成这样的mesh，A compute shader generates vertex data, including positions, texture coordinates, and normal vectors. This data is stored in a buffer and later utilized as a vertex buffer to render a mesh in a graphics pipeline.
+
+index buffer是cpu端生成的，不可变；vertex buffer按一个顶点12个float来算（vec4 positions, vec4 texture coordinates, and vec4 normal vectors），这样不用考虑padding问题，注意buffer的flag，既是Vertex也是Storage；shader那边也是用specialization constant来让color和texture shader共用代码。
+
+这里很有趣的是，在最开始compute来写vertex buffer的时候，把vertex buffer也加到自己的依赖里，用memory barrier保证上一帧已经渲染完了，生成texture的compute同理，想做什么我理解，但是底层运作机制我还要想想。
+
+**TODO：回头重新研究下lightweightvk的那套同步**
+
+Since only one queue is being used, the device workload fully drains at each barrier, leaving no alternative tasks to mitigate this inefficiency. 好的例子可参考: [nvpro-samples/vk_timeline_semaphore: Vulkan timeline semaphore + async compute performance sample](https://github.com/nvpro-samples/vk_timeline_semaphore).
+
+[Synchronization Examples · KhronosGroup/Vulkan-Docs Wiki](https://github.com/KhronosGroup/Vulkan-Docs/wiki/Synchronization-Examples)
+
+## Physically Based Rendering Using the glTF 2.0 Shading Model
