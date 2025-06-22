@@ -638,4 +638,155 @@ Since only one queue is being used, the device workload fully drains at each bar
 
 [Synchronization Examples · KhronosGroup/Vulkan-Docs Wiki](https://github.com/KhronosGroup/Vulkan-Docs/wiki/Synchronization-Examples)
 
-## Physically Based Rendering Using the glTF 2.0 Shading Model
+## Chap6 Physically Based Rendering Using the glTF 2.0 Shading Model
+
+### An introduction to glTF 2.0 physically based shading model
+
+这里我主要靠[LearnOpenGL - Theory](https://learnopengl.com/PBR/Theory) + GPT先理解了一轮，感觉自己大概明白了。
+
+Roughly speaking, rendering a physically-based image is nothing more than running a fancy pixel shader with a set of textures. 说的真好，醍醐灌顶。
+
+梳理基础概念，关于**Light-object interactions**：
+
+* **specular reflection**: occurring on smooth surfaces, creates a mirror-like effect called 
+* Some light penetrates the surface, where it can either be absorbed, converted into heat, or scattered in various directions. The scattered light that exits the surface again is known as **diffuse light** & **subsurface scattering**. Scatter involves photons being redirected in various directions, while diffusion involves photons spreading out evenly.
+* The way materials absorb and scatter diffuse light varies for different wavelengths of light, giving objects their distinct colors. **albedo**, which represents the color defined by a mix of the fractions of various light wavelengths that scatter back out of a surface. The term diffuse color is often used interchangeably.
+* For thin objects, the light can even scatter out of their back side, making them **translucent**.
+
+**Energy conservation**: We simply **subtract reflected light before computing the diffuse shading**.
+
+Think of a **BSDF** (Bidirectional Scattering Distribution Functions) as an equation that describes how light scatters upon encountering a surface:
+
+* Bidirectional Reflectance Distribution Functions (BRDFs): These functions specifically describe how incident light is reflected from a surface.
+* Bidirectional Transmittance Distribution Functions (BTDFs): These functions specifically describe how light is transmitted through a material.
+* other types of BSDFs exist to account for more complex light interaction phenomena, such as subsurface scattering. 
+
+**Fresnel equation**: know how much light is reflected or transmitted on the surface.
+
+* conductors (metals): Metals do not transmit light, they only reflect it entirely, or practically entirely. Unlike dielectrics, conductors do not transmit light; rather, they **absorb some of the incident light**, converting it into heat.
+* dielectrics (nonmetals): possess the property of **diffuse reflection** — light rays pass beneath the surface of the material and some of them are absorbed, while some are returned in the form of reflection. In the specular highlight of these materials, for dielectrics it appears white or, more accurately, retains the color of the incident light.
+
+**Microfacets**:
+
+* Blinn-Phong Model: computes the intensity of the reflected light based on the angle between the viewer’s direction and the halfway vector
+* **Cook-Torrance Model**: This equation represents the amount of light reflected in a specific direction ωo given an incident light direction ωi and the surface properties. In microfacet theory, the NDF describes the statistical distribution of microfacet normals on a surface.
+
+**What is a material**: Materials serve as high-level descriptions utilized to represent surfaces, defined by combinations of BRDFs and BTDFs. These BSDFs are articulated as parameters that govern the visual characteristics of the material.
+
+The Khronos 3D Formats Working Group is continually striving to enhance PBR material capabilities by introducing new extension specifications: [glTF/extensions/README.md at main · KhronosGroup/glTF](https://github.com/KhronosGroup/glTF/blob/main/extensions/README.md)
+
+参考除了PBR那本书，还有siggraph的课[neil3d/awesome-pbr](https://github.com/neil3d/awesome-pbr)，[Physically Based Rendering in Filament](https://google.github.io/filament/Filament.md.html#overview/physicallybasedrendering)
+
+### Rendering unlit glTF 2.0 materials
+
+[glTF/extensions/2.0/Khronos/KHR_materials_unlit at main · KhronosGroup/glTF](https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_unlit)
+
+designed with the following motivation: Mobile, Photogrammetry, Stylized materials
+
+这里代码都很简单，注意一下根据 glTF specification，如果顶点颜色没有就用默认白色替代，texture coords没有就用000替代。
+
+### Precomputing BRDF look-up tables
+
+How to precompute the Smith GGX BRDF look-up table (LUT). To render a PBR image, we have to evaluate the BRDF at each point on the surface being rendered, considering the surface properties and the viewing direction. The X-axis represents **the dot product between the surface normal vector and the viewing direction**, while the Y-axis represents the surface **roughness** values 0...1. Each texel holds three 16-bit floating point values. The first two values represent **the scale and bias to F0**, which is the specular reflectance at normal incidence. The third value is utilized for the sheen material extension.
+
+讲了下为什么要与计算，**G和部分的F是只取决于v，h和Roughness的**，然后我们发现n和v永远是不会分开的，所以可以当成一个，用n*v
+
+然后讲与计算的理论基于[Chapter 20. GPU-Based Importance Sampling | NVIDIA Developer](https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-20-gpu-based-importance-sampling)，推荐了https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
+
+cpp那边比较简单，就是起一个compute，算好贴图内容的buffer，wait等计算完毕，然后写回磁盘。
+
+shader里面代码比较多：
+
+* The R and G channels are used for GGX BRDF LUT, the third channel is used for Charlie BRDF LUT which is required for the Sheen material extension.
+* `hammersley2d`基于[Points on a Hemisphere](https://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html)，关键词 van der Corput sequence
+* `random`基于[Improvements to the canonical one-liner GLSL rand() for OpenGL ES 2.0 | Byte Blacksmith](https://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/)
+* `importanceSample_GGX`基于Unreal的[2013SiggraphPresentationsNotes-26915738.pdf](https://cdn2-unrealengine-1251447533.file.myqcloud.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf)
+* 算Sheen material的时候，`Ashikhmin`和`D_Charlie`基于filament的 https://github.com/google/filament/blob/f096c4d8de9f72e38f3ac1b0bbc176fb094994f7/shaders/src/surface_brdf.fs#L94
+* `BRDF`就是根据那些helper函数算LUT的值
+
+最后提到ue有个不用在mobile上采这个预计算的贴图的办法，来自 [Physically Based Shading on Mobile](https://www.unrealengine.com/en-US/blog/physically-based-shading-on-mobile)
+
+```glsl
+half3 EnvBRDFApprox( half3 SpecularColor, half Roughness, half NoV )
+{
+	const half4 c0 = { -1, -0.0275, -0.572, 0.022 };
+	const half4 c1 = { 1, 0.0425, 1.04, -0.04 };
+	half4 r = Roughness * c0 + c1;
+	half a004 = min( r.x * r.x, exp2( -9.28 * NoV ) ) * r.x + r.y;
+	half2 AB = half2( -1.04, 1.04 ) * a004 + r.zw;
+	return SpecularColor * AB.x + AB.y;
+}
+```
+
+### Precomputing irradiance maps and diffuse convolution
+
+The second part of the split sum approximation necessary to calculate the glTF 2.0 physically-based shading model comes from the irradiance cube map which is precalculated by convolving the input environment cube map with the GGX distribution of our shading model. 这里说的有点不够清楚，应该是pre-filtered environment map，叫irradiance cube map也行但不够有指向性，irradiance map是给diffuse部分用的。
+
+实现基于 [glTF-Sample-Renderer/source/shaders/ibl_filtering.frag at 3dc1bd9bae75f67c1414bbdaf1bdfddb89aa39d6 · KhronosGroup/glTF-Sample-Renderer](https://github.com/KhronosGroup/glTF-Sample-Renderer/blob/3dc1bd9bae75f67c1414bbdaf1bdfddb89aa39d6/source/shaders/ibl_filtering.frag)
+
+先讲cpp这边，`prefilterCubemap`画一个全屏三角形，让fragment shader干活儿，然后保存。
+
+shader那边：
+
+* `uvToXYZ` converts a cubemap face index and vec2 coordinates into vec3 cubemap sampling direction.
+* `filterColor` does the actual Monte Carlo sampling，理论部分见 [Image Based Lighting with Multiple Scattering | Bruno Opsenica's Blog](https://bruop.github.io/ibl/)
+
+The process of importance sampling can introduce visual artifacts. One way to improve visual quality without compromising performance is by utilizing hardware-accelerated mip-mapping for swift filtering and sampling. 见 [Final_sap_0073.pdf](https://cgg.mff.cuni.cz/~jaroslav/papers/2007-sketch-fis/Final_sap_0073.pdf) 和 [Chapter 20. GPU-Based Importance Sampling | NVIDIA Developer](https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-20-gpu-based-importance-sampling)
+
+how to convert cube maps between different formats: [Converting to/from cubemaps](https://paulbourke.net/panorama/cubemaps/index.html)
+
+### Implementing the glTF 2.0 metallic-roughness shading model
+
+讲怎么实现一个最简单的metallic-roughness shading model了，简单的介绍见 [KhronosGroup/glTF-Sample-Viewer at glTF-WebGL-PBR](https://github.com/KhronosGroup/glTF-Sample-Viewer/tree/glTF-WebGL-PBR)
+
+讲代码了，先介绍了下一些helper function：
+
+* `GLTFGlobalSamplers`包含三个sampler，分别是clamp，wrap和mirror
+* `EnvironmentMapTextures`负责存储所有的IBL environment map texture和BRDF的LUT
+* `GLTFMaterialTextures`则包含了所有渲染要用到的贴图，`loadMaterialTextures`负责加载这些贴图
+* `MetallicRoughnessDataGPU`包含了一些材质信息，metallicRoughnessNormalOcclusion四合一，一是为了性能，而是对其方便；emissiveFactor和alphaCutoff也合成一个vec4了；其他的就是一些uint32_t的id，以及alphaMode，决定怎么去理解alpha值；`setupMetallicRoughnessData`负责填充这个结构体
+
+然后开始`main`函数：
+
+* `Vertex`格式定义在了UtilsGLTF.h里，注意不仅有uv0还有uv1，uv1一般是给lightmap或者reflection map用的；结尾还有2个float当padding有，一个Vertex正好64byte
+* 然后加载贴图，加载IBL相关的资源，把material的数据塞进gpu buffer里，然后传buffer device address给shader；push constant一共传三个指针进去，第一个是PerDrawData的指针，里面包含mvp、material id等数据，第二个是刚提到的material数组，第三个是environments相关的数组
+
+然后就到了大头的shader部分，这边说vertex shader uses programmable-vertex-pulling，看代码不是这样，还是走的传统的绑定。
+
+fragment shader是干活儿的部分：
+
+* `Inputs.frag`里面一堆helper函数和一些input声明，都比较简单
+* `main`里面就是上来采样一堆贴图，然后处理是normal：normal除了pixel自己带一个世界空间的，normal map还会采样出来一个切线空间的，`perturbNormal`里面会算下TBN矩阵（根据uv和原始的normal）然后把normal map采样出来的值变换回世界空间（见 [Followup: Normal Mapping Without Precomputed Tangents](http://www.thetenthplanet.de/archives/1180)）；里面调用了`cotangentFrame`，creates tangent space based on the vertex position p, the per-vertex normal vector N, and uv texture coordinates，这里也提了This is not the best way to get the tangent basis, as it suffers from uv mapping discontinuities, but it’s acceptable to use it in cases where per-vertex precalculated tangent basis is not provided
+* 调用`calculatePBRInputsMetallicRoughness`来填充`PBRInfo`；然后就是算IBL贡献的specular和diffuse color的值，`getIBLRadianceContributionGGX` 和 `getIBLRadianceLambertian`；最后加上一个光源的贡献`calculatePBRLightContribution`
+* 然后把AO的贡献也算上去，加上自发光项，做一下gamma校正，结束
+
+然后是一些细节部分，基于[KhronosGroup/glTF-Sample-Viewer at glTF-WebGL-PBR](https://github.com/KhronosGroup/glTF-Sample-Viewer/tree/glTF-WebGL-PBR)：
+
+* `PBRInfo`里面存了当前pixel的一些几何性质，比如NdotL，NdotV之类，以及材质的性质
+* Calculation of the lighting contribution from an Image-Based Light source is split into two
+  parts – diffuse irradiance and specular radiance. 
+  * `getIBLRadianceLambertian`基于[Image Based Lighting with Multiple Scattering](https://bruop.github.io/ibl/#single_scattering_results)，注意这不止是去采样环境的Irradiance map，还考虑了镜面反射修正和Fresnel 能量损失补偿
+  * `getIBLRadianceContributionGGX`使用 prefiltered mipmap 做 roughness 层级选择，查BRDF LUT进行计算等，注意这里还有一个传进来的`specularWeight`
+* `diffuseBurley`来自[s2012_pbs_disney_brdf_notes_v3.pdf](https://blog.selfshadow.com/publications/s2012-shading-course/burley/s2012_pbs_disney_brdf_notes_v3.pdf)，相比仅仅是Lambert Diffuse，还考虑了 roughness 对边缘变暗的影响
+* 用`specularReflection`算F（注意这里用的是F90-F0，没有直接化简为F90=1），`geometricOcclusion`算G，`microfacetDistribution`算D
+* `calculatePBRInputsMetallicRoughness`：
+  * 里面会把roughness最小值clamp到0.04，假设认为就算是dielectrics也会至少有4%的高光反射，然后平方一下，说会让roughness的分布更线性 [Physically Based Shading At Disney](https://disneyanimation.com/publications/physically-based-shading-at-disney/)
+  * For a typical incident reflectance range between 4% to 100%, we should set the grazing reflectance to 100% for the typical Fresnel effect. For a very low reflectance range on highly diffuse objects, below 4%, incrementally reduce grazing reflectance to 0%  默认我们希望 F90 = 1.0 来符合 Fresnel 行为，但对一些反射极低（F₀ < 0.04）的材质人为降低 F90，避免它们在大角度时出现不合逻辑的高光。
+* `calculatePBRLightContribution`计算The lighting contribution from a single light source，color = NdotL * lightColor * (diffuseContrib + specContrib)
+
+最后推荐去看Unreal的shader代码：[UnrealEngine/Engine/Shaders/Private at release · EpicGames/UnrealEngine](https://github.com/EpicGames/UnrealEngine/tree/release/Engine/Shaders/Private)
+
+### Implementing the glTF 2.0 specular-glossiness shading model
+
+The specular-glossiness extension is a **deprecated** and archived in the official Khronos repository.  原因 [Converting glTF PBR materials from spec/gloss to metal/rough](https://www.donmccurdy.com/2022/11/28/converting-gltf-pbr-materials-from-specgloss-to-metalrough)
+
+后面会讲这个，A new glTF specular extension, **KHR_materials_specular**, that replaces this older specular-glossiness shading model and show how to convert from the old model to the new extension.
+
+特意提了给material struct加字段要注意对齐，We need it to **keep the binary representation of this structure aligned with GLSL shader inputs**. The GLSL st430 layout and alignment rules are not complex but might not be correctly implemented by different hardware vendors, especially on mobile devices. In this case, manual padding is just an easy and good enough way to fix compatibility between all GPUs. 对齐见[Vulkan-Guide/chapters/shader_memory_layout.adoc at main · KhronosGroup/Vulkan-Guide](https://github.com/KhronosGroup/Vulkan-Guide/blob/main/chapters/shader_memory_layout.adoc)
+
+shader里按照这个改改就行 [KHR_materials_pbrSpecularGlossiness | glTF](https://kcoley.github.io/glTF/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness/)
+
+## Chap 7Advanced PBR Extensions
+
+
+
