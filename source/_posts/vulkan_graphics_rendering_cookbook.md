@@ -663,8 +663,8 @@ Think of a **BSDF** (Bidirectional Scattering Distribution Functions) as an equa
 
 **Fresnel equation**: know how much light is reflected or transmitted on the surface.
 
-* conductors (metals): Metals do not transmit light, they only reflect it entirely, or practically entirely. Unlike dielectrics, conductors do not transmit light; rather, they **absorb some of the incident light**, converting it into heat.
-* dielectrics (nonmetals): possess the property of **diffuse reflection** — light rays pass beneath the surface of the material and some of them are absorbed, while some are returned in the form of reflection. In the specular highlight of these materials, for dielectrics it appears white or, more accurately, retains the color of the incident light.
+* **conductors (metals)**: Metals do not transmit light, they only reflect it entirely, or practically entirely. Unlike dielectrics, conductors do not transmit light; rather, they **absorb some of the incident light**, converting it into heat.
+* **dielectrics (nonmetals)**: possess the property of **diffuse reflection** — light rays pass beneath the surface of the material and some of them are absorbed, while some are returned in the form of reflection. In the specular highlight of these materials, for dielectrics it appears white or, more accurately, retains the color of the incident light.
 
 **Microfacets**:
 
@@ -788,5 +788,72 @@ shader里按照这个改改就行 [KHR_materials_pbrSpecularGlossiness | glTF](h
 
 ## Chap 7Advanced PBR Extensions
 
+Our GLSL shaders code is based on the official Khronos Sample Viewer and serves as an example implementation of these extensions.
 
+### Introduction to glTF PBR extensions
+
+the glTF 2.0 list of ratified extensions specification: [glTF/extensions/README.md at main · KhronosGroup/glTF](https://github.com/KhronosGroup/glTF/blob/main/extensions/README.md)  说layer机制和adobe的有点像 [Autodesk/standard-surface: White paper describing the Autodesk Standard Surface shader.](https://github.com/Autodesk/standard-surface)
+
+Layering mimics real-world material structures by **stacking multiple layers, each with its own light-in-teracting properties**. To maintain physical accuracy, the first layer, called the base layer, should be either fully opaque (like metallic surfaces) or completely transparent (like glass or skin).  You can think of it as **a statistically weighted blend of two different materials**, where you combine a certain percentage of material A with a certain percentage of material B.
+
+这一章的main.cpp都很简单，只是简单加载模型，调用下gltf相关的函数，实现都在`GLTFContext`里。
+
+`renderglTF`有个rebuildRenderList参数，用来signal that model-to-world transformations of glTF nodes should be rebuilt
+
+* 先调用`buildTransformsList`负责build node transformations and collect other nodes data，把相关的数据（主要是各种id）塞到gltf.transforms里，然后transparentNodes、transmissionNodes和opaqueNodes里记录当前mesh在gltf.transforms里的index，gltf.transforms直接做个host visible的buffer
+* 然后调用`sortTransparentNodes`，负责对不透明物体排序保证渲染正确
+* 准备per frame的uniform和push constant，push constant里都是buffer address
+* 开始opaque pass（中间跳过了一些代码），没用vertex pulling而是走的传统的那套，这里有个小技巧是把`transformId`当成`vkCmdDrawIndexed`的`firstInstance`传进去了，会在shader里变为`gl_BaseInstance`，用这个值来索引到该mesh的transfrom，好处是不用每个drawcall都更新一遍push constant，性能好
+* 先画opaque，然后开始transmission：首先screen copy，Some transparent nodes may require a screen copy to render various effects, such as volume or index-of-refraction，再一个for循环开始画transmission；最后transparent，然后round robin更新下screen copy要用的texture
+
+### Implementing the KHR_materials_clearcoat extension
+
+[glTF/extensions/2.0/Khronos/KHR_materials_clearcoat/README.md at main · KhronosGroup/glTF](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_clearcoat/README.md)
+
+The KHR_materials_clearcoat extension adds a clear, reflective layer on top of another material or surface. This layer reflects light both from itself and the layers underneath.
+
+The specular BRDF for the clearcoat layer uses the specular term from the glTF 2.0 Metallic-Roughness material. The microfacet Fresnel term is calculated **using the NdotV term instead of the VdotH term**, effectively ignoring the microscopic surface orientation within the clearcoat layer. 算F的时候，不用半角向量了，而是直接N dot V
+
+讲实现的部分，首先是`GLTFMaterialDataGPU`加上对应的字段，然后加载的时候加载对应的贴图即可。
+
+大头在shader部分， The clearcoat factor and roughness are packed into a texture as r and g channels respectively
+
+frag里面会判断是不是clearcoat的材质（通过按位与判断），F0是走的IOR计算的，后文会提到，F90直接是1。
+
+用`getIBLRadianceGGX`算好clearcoat的环境光的镜面高光（与算主材质的对应项的`getIBLRadianceContributionGGX`几乎一样），复用`F_Schlick`算clearcoat的Fresnel项，然后再最后才叠加上clearcoat的材质效果（晚于emissive）：
+
+```cpp
+vec3 color = specularColor + diffuseColor + emissiveColor + sheenColor;
+color = color * (1.0 - pbrInputs.clearcoatFactor * clearcoatFresnel) + clearCoatContrib
+// 应该等价文档里的：
+// coated_material = mix(base_layer, clearcoat_layer, clearcoatFactor * clearcoatFresnel);
+```
+
+### Implementing the KHR_materials_sheen extension
+
+[glTF/extensions/2.0/Khronos/KHR_materials_sheen/README.md at main · KhronosGroup/glTF](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_sheen/README.md#reference)
+
+代码上倒都是差不多，读帖图，读配置，shader里面一堆helper函数。注意如果读不到贴图，就给个1x1的白色贴图，这样可以简化shader代码，性能也没有很受影响，1x1的贴图也可能能在cache里。
+
+The Sheen extension needs a different BRDF function，主要实现在`getIBLRadianceCharlie`里，用 Charlie BRDF + IBL 来计算 glTF 的 sheen 层贡献，舍弃了 Fresnel 和几何项（注意BRDF LUT采样的是b，第三项，给sheen用的）。生成BRDF LUT时候的处理前文提过。
+
+关于计算，The Sheen extension provides its own roughness value, so no perceptual adjustments are needed. 直接用roughness即可. All we have to do here is to multiply sheenRoughnessFactor by the total number of mip-levels mipCount to determine the correct mip-level, sample the precalculated environment map, and then multiply it by the BRDF and sheenColor.  最终计算，还算上了AO occlusion：
+
+`sheenColor = lights_sheen + mix(sheenColor, sheenColor * occlusion, occlusionStrength);`
+
+### Implementing the KHR_materials_transmission extension
+
+[glTF/extensions/2.0/Khronos/KHR_materials_transmission/README.md at main · KhronosGroup/glTF](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_transmission/README.md#reference)
+
+The `KHR_materials_transmission` enables the creation of transparent materials that absorb, reflect and transmit light depending on the incident angle and the wavelength of light. **Infinitely thin materials without refraction, scattering, or dispersion.** A specular **BTDF** (Bidirectional Transmission Distribution Function) : Uses the same Trowbridge-Reitz distribution as the specular BRDF (Bidirectional Reflectance Distribution Function) but samples along the view vector instead of the reflection direction.
+
+cpp代码部分，读取部分没啥可说，主要是更详细说了下篇章开始介绍的`renderGLTF`函数的改动，渲染transmission节点需要渲染opaque节点之后的渲染结果，所以需要create a copy of the rendered surface and use it as input for the transmission nodes. 那就需要先把swapchain的texture copy一份，然后也生成一下mipmap，记得把这个texture作为下一个renderpass的dependency
+
+**TODO：弄清楚这里image barrier的用法**
+
+注意，画transmission的时候没有用alpha blending，仍然走的opaque的pipeline；最后是从后到前画transparent node
+
+shader部分的改动，纯就看transmission的话，would be similar to GGX/Lambertian, but instead of using the reflection vector, we use the dot product NdotV. 这边没详说，和KHR_materials_volume一起看比较好。
+
+### Implementing the KHR_materials_volume extension
 
