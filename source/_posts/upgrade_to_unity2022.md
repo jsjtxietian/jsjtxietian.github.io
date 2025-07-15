@@ -27,7 +27,7 @@ date: 2025-03-25
 
 当然，最开始出安卓包倒是没去考虑bugly、firebase那些可能要升级才能使用的插件，先都暂时禁用了，看看能不能出包玩起来再说。不仅gradle经常抽风，P4也在帮忙：mark for delete的文件夹P4不会删，但是如果名字里带`.androidlib`，依然会被unity认为是个安卓库，会导致找不到manifest而报错。
 
-好不容易把包弄出来了，启动就crash（也是意料之中）,`Throwing new exception 'No interface method getPackStates...`，升级一下gradle里面googleplay的依赖即可。当然升级引擎也带来了副作用，见[Unity - Manual: Android requirements and compatibility](https://docs.unity3d.com/Manual/android-requirements-and-compatibility.html)：`Unity supports Android 6.0 “Marshmallow” (API level 23) and above` 会带来玩家流失，但目前这就不是我要处理的问题了。
+好不容易把包弄出来了，启动就crash（也是意料之中）,`Throwing new exception 'No interface method getPackStates...`，升级一下gradle里面googleplay的依赖即可。当然升级引擎也带来了副作用，见[Unity - Manual: Android requirements and compatibility](https://docs.unity3d.com/Manual/android-requirements-and-compatibility.html)：`Unity supports Android 6.0 “Marshmallow” (API level 23) and above` 会带来玩家流失，但目前这就不是我要处理的问题了（Update：最近通过改代码的方式又改成支持Api level 21了，看起来Unity只是自己升了下，没有什么一定要升的理由）。
 
 #### 双线出包
 
@@ -71,6 +71,9 @@ date: 2025-03-25
 - 压缩的库在升级后也有问题，照着修了修：[Encoding 437 data could not be found · Issue #441 · adamhathcock/sharpcompress](https://github.com/adamhathcock/sharpcompress/issues/441)
 - 通过sub-scene方式进行的level streaming会有几十上百个冗余的Cubemap，每个64k，发现unity2022自己作妖，关掉BuiltinSkyManager就行了
 - 异形屏渲染也有问题，和resizableWindow、renderOutsideSafeArea啥的有关系，不过不是我修的
+- 偶现的玩游戏会越来越卡，后面发现是因为我们进游戏会关GC，但是如果正好在增量GC期间强行把整个大的GC关了就会导致内部状态没有reset设置对，引擎会一直尝试做增量GC，直到每帧给的时间用完，下一帧继续，配合2022的帧时间机制，会越来越卡
+- Prefab序列化如果和代码不匹配，可能直接crash
+- 修了ShaderBinaryData::GetBlobData里面的空指针crash，也不是很确定就是Unity自带的还是我们改出来的，反正先保护着
 
 #### 关于序列化
 
@@ -113,6 +116,8 @@ date: 2025-03-25
 * 编译安装so部分的引擎的文档不全，android sdk的31也需要，command line tools只能是6
 * 在Mac上编，官方推荐出Mac Editor最高可用Xcode14；还是要我自己看一堆模板报错修了修，现在Xcode16可以正常编译了
 
+最近的时候，因为谷歌商店的要求[Support 16 KB page sizes  | Compatibility  | Android Developers](https://developer.android.com/guide/practices/page-sizes#benefits)，就把Unity在新版的changelist又做到目前引擎版本上，其实也没啥，引擎这边就是个`-Wl,-z,max-page-size=16384`，主要是要push其他部门升级对应的so。
+
 #### 优化评估与迁移
 
 这其实是整个过程里面最费时间的过程：评估我们在2018做的种种优化，能不能在2022上也实现。前面其实提过还有一部分关于新功能的对于引擎的魔改，这部分倒是都问题不大，几乎1：1复制即可。旧版本上已有优化的评估与迁移确实很花时间，幸运的是整体看起来，因为我们原来写的方式就很“外挂”，大部分的优化也可以以“迁移”的方式挂到新的引擎代码里面。我也是正好借着这个机会把我们组之前做的东西几乎全部学习了一遍。
@@ -138,7 +143,7 @@ date: 2025-03-25
 
 > For example, if the format or the structure of the object have changed, they allow you to do a Safe Binary read so Unity can attempt to load it regardless. This has a performance cost, so in general it’s recommended to update bundles whenever possible when you update the engine.
 
-2022的客户端包读取2018打的ab包要走SafeBinaryRead，实在是太慢了，尤其是animation、particle这些（Instantiate时间倒是有所缩短）。想了办法，因为我们只有2022只需要兼容2018的ab包，那就看改代码强行走stream binary read，但是要注意序列化字段要对齐，builtin resource也要考虑。效果其实还不错，只是上线发现了不少crash，一部分原因是没料到线上竟然还有Unity5.6打的ab包，直接炸。
+2022的客户端包读取2018打的ab包要走SafeBinaryRead，实在是太慢了，尤其是animation、particle这些（Instantiate时间倒是有所缩短）。想了办法，因为我们只有2022只需要兼容2018的ab包，那就看改代码强行走stream binary read，但是要注意序列化字段要对齐，builtin resource也要考虑。效果其实还不错，只是上线发现了不少crash，一部分原因是没料到线上竟然还有Unity5.6打的ab包，直接炸，另一些偶现的现在也没查出来，太难了。
 
 #### More
 
@@ -146,6 +151,8 @@ date: 2025-03-25
 
 * 新的工具：比如 [Hot Reload | Edit Code Without Compiling | Utilities Tools | Unity Asset Store](https://assetstore.unity.com/packages/tools/utilities/hot-reload-edit-code-without-compiling-254358?srsltid=AfmBOoq6rzNTA51Wczw_2_C4dbnrfv47fG-s2BZkR3R_tAdlUA67GOYB) [Unity - Scripting API: FrameTiming](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/FrameTiming.html) [Profiler counters API guide | Unity Profiling Core API | 1.0.2](https://docs.unity3d.com/Packages/com.unity.profiling.core@1.0/manual/profilercounter-guide.html)
 * 各种调教：内存参数、job system的调教、大小核分配策略、ProjectSettings里面一堆东西
-* cpp那边似乎支持asan了，有空要跑跑看，其他的编译参数也可以玩玩
+  * 比如实测下来开il2cpp的faster and smaller性能会差20%，感觉不应该差那么多，也值得研究研究
+
+* cpp那边似乎支持asan了，有空要跑跑看，其他的编译参数也可以玩玩，lto，relr等等
 
 也有很多问题要解决，加油吧。

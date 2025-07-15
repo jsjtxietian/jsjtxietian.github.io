@@ -134,7 +134,7 @@ Linux kernel有[静态分支预测](https://www.zhihu.com/question/471637144/ans
 
 [Automated Testing and Profiling for Call of Duty - YouTube](https://www.youtube.com/watch?v=8d0wzyiikXM)
 
-安利了buildbot，但是还是觉得不够好，自己写了一个叫compass的系统，负责打包、测试等。主要职责：
+安利了[buildbot](https://github.com/buildbot/buildbot) （我自己看到个类似的 [robotframework](https://github.com/robotframework/robotframework)），但是还是觉得不够好，自己写了一个叫compass的系统，负责打包、测试等。主要职责：
 
 * **CI**（Triggers for every check-in, aim to complete < 30 minutes, multiple builds in parallel）：Compile game code and tools code；Converting assets；Running the game on 3-4 maps on all platforms；Other tests: Device Debug, Dedicated Server, Unit tests.
 * **All Maps**（Complete < 1h, one build at a time）：Boot testing every map in the game.
