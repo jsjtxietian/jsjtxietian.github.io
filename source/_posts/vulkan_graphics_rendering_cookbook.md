@@ -857,3 +857,27 @@ shader部分的改动，纯就看transmission的话，would be similar to GGX/La
 
 ### Implementing the KHR_materials_volume extension
 
+[glTF/extensions/2.0/Khronos/KHR_materials_volume/README.md at main · KhronosGroup/glTF](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_volume/README.md#overview)
+
+Volumetric effects are different from surface-based materials. While surface-based materials focus on how light interacts with a surface, volumetric materials describe how light moves through a medium. Scattering is not subject of this extension.
+
+文档里说的很清楚，`thickness map` 是基于法线方向烘焙的静态估计，Computing volumetric effects with a thickness map is **a lossy process**.
+
+```cpp
+vec3 getVolumeTransmissionRay(vec3 n, vec3 v, float thickness, float ior, mat4 modelMatrix) {
+  // direction of refracted light
+  vec3 refractionVector = refract(-v, n, 1.0 / ior);
+
+  // compute rotation-independent scaling of the model matrix
+  // modelMatrix 的前三列就是局部坐标系的 X、Y、Z 轴在世界空间下的位置变换，因为旋转不影响向量长度
+  // 这里提取了局部坐标轴缩放长度 
+  vec3 modelScale = vec3(length(modelMatrix[0].xyz),
+                         length(modelMatrix[1].xyz),
+                         length(modelMatrix[2].xyz));
+
+  // the thickness is specified in local space
+  return normalize(refractionVector) * thickness * modelScale.xyz;
+}
+```
+
+`getIBLVolumeRefraction`和之前的getIBL系列函数一样的作用，首先调用`getVolumeTransmissionRay`拿到最终折射的vector；然后把这个vector转到NDC空间，然后去采样framebuffer上对应的背景色；然后正常计算GGX BRDF，对没被反射的光apply一下volume attenuation：`return (1.0 - specularColor) * attenuatedColor * baseColor`。`applyVolumeAttenuation`函数基于[Beer–Lambert law - Wikipedia](https://en.wikipedia.org/wiki/Beer–Lambert_law)。
