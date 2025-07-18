@@ -881,3 +881,36 @@ vec3 getVolumeTransmissionRay(vec3 n, vec3 v, float thickness, float ior, mat4 m
 ```
 
 `getIBLVolumeRefraction`和之前的getIBL系列函数一样的作用，首先调用`getVolumeTransmissionRay`拿到最终折射的vector；然后把这个vector转到NDC空间，然后去采样framebuffer上对应的背景色；然后正常计算GGX BRDF，对没被反射的光apply一下volume attenuation：`return (1.0 - specularColor) * attenuatedColor * baseColor`。`applyVolumeAttenuation`函数基于[Beer–Lambert law - Wikipedia](https://en.wikipedia.org/wiki/Beer–Lambert_law)。
+
+### Implementing the KHR_materials_ior extension
+
+A higher IOR means more refraction. For instance, the IOR of air is nearly 1, water has an IOR of about 1.33, and glass has an IOR of around 1.5. This value is used in conjunction with the KHR_materials_transmission extension to calculate the refraction direction of light rays when passing through the material.
+
+[glTF/extensions/2.0/Khronos/KHR_materials_ior/README.md at main · KhronosGroup/glTF](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_ior/README.md#interaction-with-other-extensions)
+
+ `dielectric_f0 = ((ior - 1)/(ior + 1))^2`
+
+之前已经带到IOR的概念了，这边就简单讲了讲。
+
+### Implementing the KHR_materials_specular extension & KHR_materials_emissive_strength
+
+Addresses compatibility issues and offers the functionality of `KHR_materials_pbrSpecularGlossiness` without compromising the physical accuracy of the Metallic-Roughness PBR model.
+
+[glTF/extensions/2.0/Khronos/KHR_materials_specular/README.md at main · KhronosGroup/glTF](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_specular/README.md)
+
+The `specularColor` parameter introduces color variations into the specular reflection. It is integrated into the Fresnel term, influencing the specular reflectance at different viewing angles. At normal incidence, the specular color directly scales the base
+reflectance (F0), while at grazing angles, the reflectance approaches 1.0 regardless of the specular color. To maintain energy conservation, the maximum component of the specular color is used to calculate the scaling factor for the Fresnel term, preventing excessive energy in the specular reflection.
+
+看着就是多俩参数，也没有很复杂的计算，算f0的时候额外考虑`getSpecularColorFactor`，用PBRInfo里多了一个`specularWeight`来调节。
+
+Before the introduction of the KHR_materials_emissive_strength extension, it was difficult to control the intensity of a material’s light emission. [glTF/extensions/2.0/Khronos/KHR_materials_emissive_strength/README.md at main · KhronosGroup/glTF](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_emissive_strength/README.md)
+
+### Extend analytical lights support with KHR_lights_punctual
+
+其实就是给shader加上正经的光源支持，和之前一样，`LightDataGPU`的gpu address走push constant送进shader里。很暴力地遍历光源，一个个算，实现参考了 [glTF™ 2.0 Specification Appendix B: BRDF Implementation](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#appendix-b-brdf-implementation)。PBR那边的俩函数是对直接光照计算的最基础的BRDF 表达，`getBRDFLambertian`漫反射，`getBRDFSpecularGGX`算镜面反射，F * Vis * D，Vis 已经合并了 G 项和 1/(4 N·L N·V)
+
+渲染有点问题，提了issue：[Rendering bug in Ch07_Sample08_Analytical · Issue #37 · PacktPublishing/3D-Graphics-Rendering-Cookbook-Second-Edition](https://github.com/PacktPublishing/3D-Graphics-Rendering-Cookbook-Second-Edition/issues/37)  其实之前看着有些demo关了transmission也会有问题，不知道是不是同样的原因。
+
+## Graphics Rendering Pipeline
+
+### Scene graph
