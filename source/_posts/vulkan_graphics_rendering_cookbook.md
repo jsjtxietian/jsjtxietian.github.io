@@ -999,10 +999,36 @@ Draw里面 uses a single push constant value for the entire scene.  We can rende
 
 从scene graph删除node用了很聪明的做法：use the std::stable_partition() algorithm to move all nodes marked for deletion to the end of the array. Once the nodes to be deleted are relocated, we can simply resize the container to remove them from the active scene. This method ensures that we maintain the relative order of the nodes that are not deleted, while efficiently cleaning up those that are.
 
-`eraseSelected`来自[How to remove non contiguous elements from a vector in c++](https://stackoverflow.com/questions/64149967/how-to-remove-non-contiguous-elements-from-a-vector-in-c/64152990#64152990)，
+`eraseSelected`来自[How to remove non contiguous elements from a vector in c++](https://stackoverflow.com/questions/64149967/how-to-remove-non-contiguous-elements-from-a-vector-in-c/64152990#64152990)，从一个 std::vector 中删除指定索引位置的一系列元素。When deleting a node, all of its children must also be marked for deletion. We achieve this by using a recursive routine that iterates over all the child nodes, adding each node’s index to the deletion array.  `addUniqueIdx`因为要保持内部顺序，所以还是用了binary search. 这里麻烦的就是原来是个紧凑的数组，删完还要是个紧凑的数组，而且index会变，所以`deleteSceneNodes`里还做了个a linear mapping table that maps the old node indices to the new ones. 
 
+The deleteSceneNodes() routine helps us compress and optimize the scene graph, while also merging multiple meshes with the same material.如果合并了mesh，那就要去改变scene nodes，删除对应的索引到旧的mesh的节点。
 
-
-
+`mergeNodesWithMaterial`因为scene本身的性质，只merge最高的lod级别，而且假设了所有merge起来的mesh都有一样的transformation。具体实现直接略过，需要再看。整体上感觉确实是不错的设计，runtime做这些还算有点重了，但是在资源处理阶段就做完还算挺好。
 
 ### Rendering large scenes
+
+之前介绍合scene就是因为Bistro场景会有两个mesh，exterior.obj和interior.obj. exterior.obj contains a tree with over 10K individual leaves, each represented as a separate object, so we merge them into larger submeshes for improved performance. 反正处理的这边就是一通merge，mergeScenes，mergeMeshData，mergeMaterialLists.
+
+这边skybox渲染的时候，给的`mvp = proj * mat4(mat3(view))`，去掉了view矩阵的translation部分构造的.
+
+整个Bistro场景就个indirect draw搞定了，shader那边有一些镜像cpu这边的数据结构，然后是vertex shader，前面提过firstInstance其实是draw data id:
+
+```glsl
+void main() {
+  mat4 model = pc.transforms.model[pc.drawData.dd[gl_BaseInstance].transformId];
+  gl_Position = pc.viewProj * model * vec4(in_pos, 1.0);
+  uv = vec2(in_tc.x, 1.0-in_tc.y);
+  normal = transpose( inverse(mat3(model)) ) * in_normal;
+  vec4 posClip = model * vec4(in_pos, 1.0);
+  worldPos = posClip.xyz/posClip.w;
+  materialId = pc.drawData.dd[gl_BaseInstance].materialId;
+}
+```
+
+fragment shader更为复杂一些。先从alpha test开始讲，这边用dithering去模拟的alpha transparency：[Alex Charlton — Dithering on the GPU](https://alex-charlton.com/posts/Dithering_on_the_GPU/)
+
+
+
+
+
+`renderSceneTreeUI`里的NewRoot就是因为合并mesh才被创建出来的.
