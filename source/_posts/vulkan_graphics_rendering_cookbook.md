@@ -1007,7 +1007,7 @@ The deleteSceneNodes() routine helps us compress and optimize the scene graph, w
 
 ### Rendering large scenes
 
-之前介绍合scene就是因为Bistro场景会有两个mesh，exterior.obj和interior.obj. exterior.obj contains a tree with over 10K individual leaves, each represented as a separate object, so we merge them into larger submeshes for improved performance. 反正处理的这边就是一通merge，mergeScenes，mergeMeshData，mergeMaterialLists.
+之前介绍合scene就是因为Bistro场景会有两个mesh，exterior.obj和interior.obj. exterior.obj contains a tree with over 10K individual leaves, each represented as a separate object, so we merge them into larger submeshes for improved performance. 反正处理的这边就是一通merge，mergeScenes，mergeMeshData，mergeMaterialLists. 本章最后详细讲了这些函数。
 
 这边skybox渲染的时候，给的`mvp = proj * mat4(mat3(view))`，去掉了view矩阵的translation部分构造的.
 
@@ -1025,10 +1025,43 @@ void main() {
 }
 ```
 
-fragment shader更为复杂一些。先从alpha test开始讲，这边用dithering去模拟的alpha transparency：[Alex Charlton — Dithering on the GPU](https://alex-charlton.com/posts/Dithering_on_the_GPU/)
+fragment shader更为复杂一些。
 
+先从alpha test开始讲，这边用dithering去模拟的alpha transparency：[Alex Charlton — Dithering on the GPU](https://alex-charlton.com/posts/Dithering_on_the_GPU/).  这里有个小trick， scale the alpha-cutoff value using fwidth() to achieve better anti-aliasing for alpha-tested geometry：[Anti-aliased Alpha Test: The Esoteric Alpha To Coverage | by Ben Golus | Medium](https://bgolus.medium.com/anti-aliased-alpha-test-the-esoteric-alpha-to-coverage-8b177335ae4f) 
 
+A more accurate method for transforming normal vectors: [Transforming Normals - Eric Lengyel](https://terathon.com/blog/transforming-normals.html). shader光照计算比较简单，还没有即成Chap6-7介绍的PBR shader。
 
+## Chap 9 glTF Animations
 
+我其实一直对animation（尤其是skeletal animations）一窍不通，也就简单看过 [Hands-On C++ Game Animation Programming (豆瓣)](https://book.douban.com/subject/35616903/) 还忘光了。推荐了gltf的文档：[glTF™ 2.0 Specification animation](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#animations)
 
-`renderSceneTreeUI`里的NewRoot就是因为合并mesh才被创建出来的.
+我个人理解，输入是模型空间坐标系下的顶点坐标（T-Pose 下的静态位置），输出也是模型空间中。
+$$
+M_{skin_i} = M_{animation_i} \times M_{bind\_pose\_inverse_i}
+$$
+
+* Inverse Bind Matrix：将一个在模型空间的点，变换到某个特定骨骼的骨骼空间中去。每个骨骼都有自己唯一的一个矩阵，这个矩阵在整个动画过程中是不变的。It's called a "bind matrix" because it's directly related to the "bind pose" of the character. The "bind pose" is the default, neutral stance (like a T-pose or A-pose) where the 3D model's skin is formally attached, or "bound," to the skeleton. [Maya Help | Bind pose | Autodesk](https://help.autodesk.com/view/MAYAUL/2025/ENU/?guid=GUID-36808BCC-ACF9-4A9E-B0D8-B8F509FEC0D5)
+* 当前帧动画矩阵 (Current Animation Pose Matrix)。这个矩阵代表在动画的某一帧，某个骨骼的最终朝向和位置。这个矩阵是将一个点从该骨骼的局部空间变换回模型空间。重要的是，这个矩阵已经包含了所有父骨骼的变换（一路遍历骨骼树算出来的）。代表了它在当前动画帧下，在整个模型空间中的最终姿态。这个矩阵是每一帧都在变化的。
+* M_skin代表了一个完整的“位移”变换：从绑定姿势到当前动画姿势的净变化。先算出顶点相对于骨骼的“固定”的相对坐标，然后让运动后的骨骼带着这个“相对坐标”去到它在世界中的新位置。
+
+$$
+V_{final} = \sum_{i=1}^{n} (w_i \times (M_{skin_i} \times V_{bind}))
+$$
+
+书里讲的是the final global transform for a glTF bone is constructed as follows：`globalTransform(bone) = globalTransform(animation(root)) * ... * globalTransform(animation(parent)) * localTransform(animation(bone)) * invBind(bone)` 感觉怪怪的，其实逻辑差不多，不过glTF 里储存的动画数据，是每一根骨骼相对于其父骨骼的局部变换，所以一路乘（最后代码里也是一次）。 
+
+### Implementing the glTF animation player & Doing skeletal animations in compute shaders
+
+Skeletal animations imply moving vertices based on the weighted influence of multiple matrices, which represent a skeleton of bones. Each bone is represented as a matrix that influences nearby vertices based on its weight. In essence, skinning requires bones, a hierarchy of matrices, and weights.
+
+用compute做skinning：we specify all mutable buffers as dependencies in the dispatch command. This ensures that LightweightVK places all necessary Vulkan buffer memory barriers before and after buffers are used, based on their usage flags and previous use.  We need to use barriers in this case to ensure the buffer for the previous frame is fully processed before we start preparing the next one. The size of our vertex buffer is always padded to 16 vertices, so we don’t have to worry about alignment.
+
+讲了下animation.comp，正常算morph和skinning，注意normal的算法：[Transforming Normals - Eric Lengyel](https://terathon.com/blog/transforming-normals.html)
+
+### Introduction to morph targets & Loading glTF morph targets data & Adding morph targets support
+
+A morph target is a deformed version of a mesh. In glTF, morph targets are used to create mesh deformations by blending different sets of vertex positions, or other attributes, like normal vectors, according to specified weights. 
+
+代码快速略过...
+
+In fact, skinning and morphing animations often complement each other, allowing for more dynamic and expressive character movements. 
