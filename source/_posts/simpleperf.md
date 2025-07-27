@@ -8,8 +8,6 @@ date: 2025-02-12
 
 
 
-
-
 在写[游戏性能优化管线](https://jsjtxietian.github.io/2024/10/17/game_optimization_pipeline/)的时候，我就想着能不能自己在现在的项目里推动一下相关的建设。正好问了问在腾讯搞metaperf的朋友，他们metaperf的采集端在安卓上确实只是 simpleperf 的封装，所以我想在自己做的游戏上也试试simpleperf，对于做帧率优化和卡顿优化应该是不小的帮助，尤其是目前我们并没有采样release下堆栈的手段，可观测性极差。
 
 
@@ -137,3 +135,12 @@ date: 2025-02-12
 
 所以看起来unity的那个符号so（libunity.sym.so）就是会这样，就不适合来给simpleperf或者perfetto使用，这俩期待的是包含符号的完整的so，而unity没有给这样的so（我不确定unity一定是这样的行为，看代码大概是，具体需要调试源码看看）。而我不给符号给simpleperf恰好就是绕开了这个问题，也错怪perfetto了。真就是知识到用的时候才觉得少，但庆幸自己一路坚持了下来。
 
+## Update
+
+因为最近快离职了，这个Topic估计短时间内不会继续更新了。相关代码在[jsjtxietian/SimpleperfToolbox: A set of tools for capturing and viewing data produced by Simpleperf](https://github.com/jsjtxietian/SimpleperfToolbox) 后面有空可以再捡起来玩玩。
+
+写完这篇文章后的一些Update：
+
+* 做了个简单的采集工具的GUI，可以让QA也帮忙录制数据，其实就是一些命令的封装，全交给AI写的。有一些项目特定的逻辑，比如拷符号、解混淆啥的也顺便处理了，可以直接出gecko那个json和report.txt那个汇总的文件。相关的已经交接给了我带的校招生，希望大家能慢慢用起来。
+* 这个工具带来的可见性还算蛮好的，管帧率的同事几乎立即发现了俩个之前没注意到的唾手可得的优化，加起来有个2%的帧率优化吧，做性能就是默念：可见性！
+* 探索了下怎么根据采样数据来分帧，说实话没那么好做（堆栈截断等问题），具体思路在readme里有。我个人的感觉是，还算先做好可视化，也许可以让AI来判断难分的帧，比硬写规则可能好一些，后面可以再探索。

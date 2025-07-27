@@ -1058,10 +1058,133 @@ Skeletal animations imply moving vertices based on the weighted influence of mul
 
 讲了下animation.comp，正常算morph和skinning，注意normal的算法：[Transforming Normals - Eric Lengyel](https://terathon.com/blog/transforming-normals.html)
 
-### Introduction to morph targets & Loading glTF morph targets data & Adding morph targets support
+### Introduction to morph targets & Loading glTF morph targets data & Adding morph targets support & Animation blending
 
 A morph target is a deformed version of a mesh. In glTF, morph targets are used to create mesh deformations by blending different sets of vertex positions, or other attributes, like normal vectors, according to specified weights. 
 
-代码快速略过...
+代码快速略过... In fact, skinning and morphing animations often complement each other, allowing for more dynamic and expressive character movements. 
 
-In fact, skinning and morphing animations often complement each other, allowing for more dynamic and expressive character movements. 
+Animation blending 主要是updateAnimationBlending函数，里面会更新`glTF.matrices`，根据位移、旋转、缩放分别插值。
+
+## Chap10 Image-Based Techniques
+
+后处理，好好学！The idea is to render the scene to an offscreen image and then apply these effects, which is why they are referred to as “image-based” techniques.
+
+### Implementing offscreen rendering in Vulkan & Implementing full-screen triangle rendering
+
+How to render directly into specific mip levels of an image and access each mip level individually. Demo展现了一个多面体（[Regular icosahedron - Wikipedia](https://en.wikipedia.org/wiki/Regular_icosahedron)），每个mipmap层级都是不同颜色的，可以展示gpu对mipmap的选择和过度（imgui那边的代码要改改才能看到全部的mipmap，默认的imgui窗口是固定位置的，而且不给拖动）。
+
+创建完texture之后，用`createTextureView`给每一个mip level都单独创建一个textual view，然后用off screen rendering往每个mip level写颜色。提了一嘴 We don’t need any additional Vulkan image layout transitions or memory barriers here because our command buffer submissions are strictly ordered. Moreover, the render-to-texture code in cmdEndRendering has already transitioned the texture to
+`VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` after rendering.
+
+讲`createTextureView`，creates a copy of the VulkanImage wrapper object from the existing texture and marks it as non-owning. 注意生命周期， the texture view remains valid only as long as the original texture is still in place. 提了下HDR的时候会用到 One useful feature of Vulkan image views is the ability to swizzle the components of a texture before returning the samples to the shader. 最后要注意`getOrCreateVkImageViewForFramebuffer`函数，there’s another set of VkImageView objects maintained inside VulkanImage, are lazily created from the member function cmdBeginRendering().
+
+后面讲了下Chap5提过的一个 how to render a full-screen quad by generating geometry directly in a vertex shader. https://www.saschawillems.de/blog/2016/08/13/vulkan-tutorial-on-rendering-a-fullscreen-quad-without-buffers
+
+n alternative to the full-screen quad rendering approach, Chap5的compute生成texture那节演示过，perform a full image compute pass.
+
+### Implementing shadow maps
+
+This requires rendering the scene into an offscreen depth framebuffer.
+
+PerFrameData：
+
+```cpp
+struct PerFrameData {
+    mat4 view;
+    mat4 proj;
+    // the product of the light’s view and projection matrices
+    // multiplied by the scale-bias matrix
+    // light’s clip-space xy coordinates are in -1…+1, while the texture coordinates are sampled in 0…1
+    mat4 light; 
+    vec4 lightAngles; // the cosines of our spotlight’s inner and outer angles
+    vec4 lightPos; // the light’s position in world space
+    uint32_t shadowTexture;
+    uint32_t shadowSampler;
+};
+```
+
+shadowmap texture是16bit的(VK_FORMAT_D16_UNORM)，sampler打开了depthCompareEnabled. Shadowmap展示为红色是因为depth图被作为只有R通道的图展示了。
+
+其实shadow pass也不需要fragment：The fragment shader for shadow map rendering is just empty because we do not output any color information, only the depth values.
+
+`vtx.shadowCoords = pc.perFrame.light * pc.model * vec4(pos, 1.0);` 在vertex shader里，vertex position is first transformed into the light’s coordinate system, then into normalized device coordinates, and finally, into texture coordinates. `light`见上文注释，直接一步变换到光源空间的纹理坐标。
+
+fragment shader里做了3 * 3的PCF: Note that we average not the results of depth map sampling at adjacent locations but the results of multiple comparisons between the depth value of the current fragment (in the light space) and the sampled depth values obtained from the shadow map. 
+
+`shadow`里面先做透视除法（硬件只会对一个特殊的、预定义的输出变量 `gl_Position` 自动执行完整的裁剪、透视除法和视口变换流程），注意这里有趣的是，这边先做了从light clip space转到texture coordinates的操作，矩阵在`light`里，然后才手动透视除法，此时z可以理解为深度，然后喂给`texture`函数。
+
+当然本章的演示都是基于spot light的，The technique described in this recipe for calculating the light’s view and projection matrices is suitable only for spot lights and, to some extent, omni lights.
+
+### Implementing MSAA in Vulkan
+
+Multisampling is a specialized form of supersampling where the fragment shader runs only once per pixel, with only the depth (and stencil) values being supersampled within a pixel. More precisely, with multisampling, the fragment shader only needs to be evaluated once per pixel for each triangle that covers at least one sample point.
+
+在vulkan里开启MSAA会麻烦一些：Multisample rendering in Vulkan works differently. Here, we need to create an offscreen render target capable of storing multiple samples per pixel and render our scene into that target. Before this multisampled image can be displayed or used in post-processing effects, it must first be resolved into a standard non-multisampled render target.
+
+给了两种方法：
+
+* `vkCmdResolveImage` 坏处是 this approach requires the multisampled image to be completely rendered and stored in memory before the resolve operation can begin
+* `vkCmdBeginRendering` requires a list of framebuffer attachments, each of which can include a resolve attachment, referred to as `VkRenderingAttachmentInfo::resolveImageView` in Vulkan. 这样不需要写内存：the Vulkan driver can resolve multisampled images into non-multisampled images without storing intermediate multisampled data in memory.
+
+开始讲代码，注意depth和color都需要设置采样数；这里因为vulkan需要在创建pipeline的时候就制定好采样数，创建了俩VKMesh，一个带MSAA一个不带；后面根据enableMSAA这个flag设置不同的texture、 resolveTexture等等，depth texture不需要resolve；ImGui还是单独的，不走MSAA
+
+提了一嘴标准MSAA的问题：Color sampling occurs once per pixel, which can lead to “shader aliasing” or Moiré patterns on high-frequency textures.有个`minSampleShading`参数可以缓解这个问题，A value of 1.0 ensures that every sample is shaded independently.  [VkPipelineMultisampleStateCreateInfo(3)](https://registry.khronos.org/vulkan/specs/latest/man/html/VkPipelineMultisampleStateCreateInfo.html)
+
+When we allocate our offscreen textures, msaaColor and msaaDepth, they occupy valuable GPU memory, even though they are never used for actual rendering on tiled GPUs. 可以指定VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT 和 VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT, tells the Vulkan driver not to allocate memory for the image unless it is actually needed.
+
+### Implementing screen space ambient occlusion
+
+Ambient occlusion, at its core, provides a simplified representation of global illumination. It can be thought of as the amount of open “sky” visible from a point on a surface, unobstructed by nearby geometry. 
+
+评估occlusion factor O(dZ)用的公式，dZ是the projected depth value and the current fragment’s depth:
+
+`O(dZ) = (dZ > 0) ? 1/(1+dZ*dZ) : 0`
+
+Cpp那边的代码就是起两个compute，一个给SSAO，一个给Blur，blur用specialization constant区分是横向还是纵向的blur。还有一个combine的shader，用full screen quad给Color和SSAO做混合的（好处应该是可以很方便地独立开关和控制SSAO）。后续加载了一个所谓的special rotation texture，4x4 pixels and contains 16 random vec3 vectors. 渲染那边要记得resolve depth attachements，因为这次SSAO是要用的了。Blur那边就是ping pong使用buffer，作为in out。
+
+SSAO的shader：
+
+```glsl
+// 书上说：normalizes the depth buffer value into the 0…1 range 有问题
+// 应该是把透视除法再变换之后的非线性z拉回view space
+// https://github.com/PacktPublishing/3D-Graphics-Rendering-Cookbook-Second-Edition/issues/38
+float scaleZ(float smpl) {
+  return (pc.zFar * pc.zNear) / (smpl * (pc.zFar-pc.zNear) - pc.zFar);
+}
+
+void main() {
+  const vec2 size = textureBindlessSize2D(pc.texDepth).xy;
+  const vec2 xy   = gl_GlobalInvocationID.xy;  // texel position
+  // the corresponding uv coordinates, shifted to texel centers by 0.5 pixels
+  const vec2 uv   = (gl_GlobalInvocationID.xy + vec2(0.5)) / size; 
+  // ...
+  const float Z     = scaleZ( textureBindless2D(pc.texDepth, uv).x );
+  // tile it across the entire framebuffer, and sample a vec3 value from it corresponding to the current fragment. serves as a normal vector to a random plane
+  const vec3  plane = textureBindless2D(pc.texRotation, xy / 4.0).xyz - vec3(1.0);
+  float att = 0.0;
+  
+  for ( int i = 0; i < 8; i++ )
+  {
+    // reflect each of vec3 offsets from this plane, producing a new sampling point, rSample
+    vec3  rSample = reflect( offsets[i], plane );
+    // The depth value zSample for this point is sampled from the depth texture and immediately converted to eye space
+    float zSample = scaleZ( textureBindless2D( pc.texDepth, uv + pc.radius*rSample.xy / Z ).x );
+    float dist    = max(zSample - Z, 0.0) / pc.distScale;
+    // The distance difference occl is scaled by an arbitrarily selected weight.
+    // dist * (2.0 - dist)在dist=1 的地方最强，然后又慢慢减弱
+    float occl    = 15.0 * max( dist * (2.0 - dist), 0.0 );
+    att += 1.0 / (1.0 + occl*occl);
+  }
+    
+  att = clamp(att * att / 64.0 + 0.45, 0.0, 1.0) * pc.attScale;
+  imageStore(kTextures2DOut[pc.texOut], ivec2(xy), vec4( vec3(att), 1.0 ) );
+}
+```
+
+高斯那边就没啥，权重可以从[DrDesten's Gaussian Kernel Calculator](https://drdesten.github.io/web/tools/gaussian_kernel/)拿，这里有趣的还有一个bilateral blur calculation，根据深度差值来算个权重加到最后混合系数里。
+
+最后安利了下HBAO和GTAO这俩AO算法，然后提了下demo里的透明因为实现原因会导致SSAO的效果不太对。
+
+### Implementing HDR rendering and tone mapping
+
