@@ -1188,3 +1188,93 @@ void main() {
 
 ### Implementing HDR rendering and tone mapping
 
+用1byte表现颜色确实不够，用VK_FORMAT_R16G16B16A16_SFLOAT，其他的A2B10G10R10_SNORM_PACK32 或者 B10G11R11_
+UFLOAT_PACK32, are more memory-efficient and can be used in many scenarios.
+
+`BrightPass.comp`:  identifies the bright areas in the rendered scene and converts the entire HDR scene to 16-bit luminance
+
+`Bloom.comp`: Two passes are used to generate the horizontal and vertical components of the bloom, utilizing ping-pong buffers.
+
+The bright pass and bloom textures are smaller, with a resolution of 512x512. They are supposed to capture only low-frequency image details and don’t need to be high-resolution. A texture to store the average scene luminance. The goal is to convert the rendered scene into a single-channel 16-bit image format representing luminance and then downscale it to a 1x1 texture using the mipmapping pyramid. The single pixel in the 1x1 mip level represents the average luminance. Component swizzling is applied to render the single-channel R image as a grayscale image.
+
+开始渲染，先走brightPass把bright region提取出来存到texBrightPass，场景的luminance存到texLumViews[0]；texLumViews[0]好了之后generate the entire mip pyramid down to 1x1，就是场景的平均luminance；然后针对texBrightPass，模糊一下开始做bloom；最后tone mapping，需要传入resolved HDR scene image, the average luminance value, and the blurred bloom texture. The tone mapping shader uses only the last 1x1 level of the mip pyramid, However, LightweightVK implements image memory barriers at the Vulkan resource level VkImage, not at the subresource level of individual texture mip levels. This requires us to transition the entire mip pyramid to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
+
+开始讲shader了，`BrightPass.comp`比较简单，提取过亮的部分和luminace到分别的贴图，The bright areas texture is a downscaled 512x512 texture. We use a 3x3 box filter to soften the results。也可以换其他的 [Jorge Jimenez – Next Generation Post Processing in Call of Duty: Advanced Warfare](https://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare/)
+
+`Bloom.comp`和之前的高斯模糊的很像，uses the same Gaussian coefficients but does not require the bilateral blur technique. 
+
+`ToneMap.frag`相对复杂一些，有三种算法：
+
+* reinhard2，来自[Tone Mapping | δelta](https://64.github.io/tonemapping/)
+* Uchimura，来自[HDR Theory and practicce (JP) | PDF](https://www.slideshare.net/nikuque/hdr-theory-and-practicce-jp)和[Practical HDR and WCG in GTSPORT](http://cdn2.gran-turismo.com/data/www/pdi_publications/PracticalHDRandWCGinGTS_20181222.pdf)
+* Khronos PBR Neutral Tone Mapper ，来自[ToneMapping/PBR_Neutral/README.md at main · KhronosGroup/ToneMapping](https://github.com/KhronosGroup/ToneMapping/blob/main/PBR_Neutral/README.md#pbr-neutral-specification)
+
+最后提了下这个算法的问题是转化太快了，人眼没那么快适应过来，这也是下一章要解决的问题。另一个问题：Strictly speaking, applying a tone mapping operator directly to the RGB channel values is a crude approach. A more accurate model would involve tone mapping the luminance value and then applying it back to the RGB values. 
+
+有的显示器直接支持HDR，看下VK_AMD_display_native_hdr和VK_EXT_hdr_metadata。Bloom的更多资料：[Bloom Disasters - The Quixotic Engineer](https://gangles.ca/2008/07/18/bloom-disasters/)  [Jorge Jimenez – Next Generation Post Processing in Call of Duty: Advanced Warfare](https://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare/)  [LearnOpenGL - Phys. Based Bloom](https://learnopengl.com/Guest-Articles/2022/Phys.-Based-Bloom)
+
+### Implementing HDR light adaptation
+
+Rather than using the current average scene luminance value to tone map the scene immediately, we blend it with a previously computed luminance value. The blending is done gradually in every frame through interpolation in a compute shader, creating a smooth transition between the old and new luminance values.
+
+也是ping-pong: By alternating the roles of the previous and new adapted luminance textures, we can iterate this process in each frame using a ping-pong technique. 两个的初始值都是很亮的50，模拟那种一开始就很亮然后慢慢适应的感觉。
+
+Cpp代码里要注意Image layout的改变。shader的代码：
+
+```glsl
+// we are processing just a single texel
+layout (local_size_x = 1, local_size_y = 1) in;
+void main() {
+  // current rendered scene luminance 
+  float lumCurr = imageLoad(kTextures2DIn[pc.texCurrSceneLuminance  ], ivec2(0, 0)).x;
+  // previous adapted luminance
+  float lumPrev = imageLoad(kTextures2DIn[pc.texPrevAdaptedLuminance], ivec2(0, 0)).x;
+  // https://google.github.io/filament/Filament.md.html#mjx-eqn-adaptation
+  float factor        = 1.0 - exp(-pc.adaptationSpeed);
+  float newAdaptation = lumPrev + (lumCurr - lumPrev) * factor;
+  // output adapted luminance
+  imageStore(kTextures2DOut[pc.texAdaptedOut], ivec2(0, 0), vec4(newAdaptation));
+}
+```
+
+最后给了几个深入的：[GDC Vault - Uncharted 2: HDR Lighting](https://www.gdcvault.com/play/1012351/Uncharted-2-HDR)  [Advances in Real-Time Rendering in 3D Graphics and Games - SIGGRAPH 2014](https://advances.realtimerendering.com/s2014/index.html#_NEXT_GENERATION_POST)
+
+
+
+## Chap11 Advanced Rendering Techniques and Optimizations
+
+最后一章！
+
+### Refactoring indirect rendering
+
+VKMesh的好处，provided a straightforward way to encapsulate scene geometry, GPU buffers, and rendering pipelines. 坏处也是couples scene data, rendering pipelines, and buffers. This strong coupling poses challenges when attempting to render the same scene data with different pipelines or when selectively rendering parts of a scene. 
+
+`VKIndirectBuffer11`用来管理一堆indirect command buffer，`VKPipeline11`用来管理创建graphics pipeline，感觉整体就是拆了下VKMesh，有两个draw函数，第一个是takes a mandatory VKPipeline11 object and uses default push constants to pass data into GLSL shaders；第二个 take custom push constants and depth state
+
+### Doing frustum culling on the CPU & Doing frustum culling on the GPU with compute shaders
+
+[Inigo Quilez :: computer graphics, mathematics, shaders, fractals, demoscene and more](https://iquilezles.org/articles/frustumcorrect/)
+
+一般的：如果 AABB完全位于视锥任意一个平面的“外侧”，那么就认为它在视锥外，可以剔除；优化版：如果视锥的所有8个角点都位于 AABB 某一个平面的“外侧”，那就意味着视锥和 AABB 没有相交，这个 AABB 就可以被安全地剔除。
+
+`getFrustumPlanes`从矩阵拿视锥面，`getFrustumCorners`拿到角，定义一个unit cube然后变换为视锥，有了这俩，剔除的代码就很直观了，simply check whether the bounding box is entirely outside any of the 6 frustum planes，然后再invert the test and check whether the frustum is entirely inside the bounding box.
+
+cpp代码那边，要给VKMesh11传StorageType_HostVisible，后续会在cpu端跑culling然后直接该indirect buffer里的instance数量.
+
+One might argue that this type of culling is inefficient because modern GPUs can render small meshes much faster than we can cull them on the CPU, and this is mostly true. It doesn’t make sense to cull very small objects such as bottles or individual leaves this way. However, the CPU culling pipeline is still extremely useful when culling large objects or even clusters of objects. 这边毕竟没上加速数据结构之类，都是给单个mesh culling.
+
+On platforms where bandwidth consumption increases power usage and heat—such as mobile phones and handheld consoles—performing culling on the CPU may prevent the costly transfer of uncompressed vertex data from RAM to tile memory, only for it to be discarded.
+
+
+
+GPU上就是把culling代码port到GLSL，然后把cpu端的for循环port到compute shader。compute shader里就是mirror了各种数据结构，然后代码几乎一样。后续优化可以考虑下patch对齐来去掉shader里的if，然后atomicAdd可以考虑换成subgroupBallot或者subgroupBallotBitCount，[Vulkan Subgroup Tutorial - Khronos Blog - The Khronos Group Inc](https://www.khronos.org/blog/vulkan-subgroup-tutorial)
+
+因为visible mesh数量需要回读，所以选择了回读前一帧的数据，也是类似一个round robin；而且还有同步问题，要等待上一帧渲染结束再回读，用了之前讲过的submit handle，In other words, we check the Vulkan fence corresponding to a command buffer submitted one frame ago. 这里也有不高效的地方，理论上等上一帧的compute shader结束就行了，没必要等整个command buffer走完。
+
+性能上简单看了下，GPU的比CPU还蛮，因为isAABBinFrustum写得不好，太多分支了，performance can be significantly improved by either rewriting the code in a SIMD-friendly way or replacing AABB culling with simpler bounding sphere culling,
+
+最后提了下，CPU那边也可以用多线程 [GDC Vault - Culling the Battlefield: Data Oriented Design in Practice](https://gdcvault.com/play/1014491/Culling-the-Battlefield-Data-Oriented)，GPU那边可以考虑compact一下indirect command，[GPU-Driven Rendering Pipelines](https://advances.realtimerendering.com/s2015/aaltonenhaar_siggraph2015_combined_final_footer_220dpi.pdf)
+
+
+
+### Implementing shadows for directional lights
