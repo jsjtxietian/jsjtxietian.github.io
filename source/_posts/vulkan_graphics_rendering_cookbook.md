@@ -1309,9 +1309,30 @@ First, we render opaque objects with standard shading. Next, we render transpare
 
 shader里面不追求完全的pbr准确，而是 keep it simple and shiny while focusing on transparency.
 
+有个关键的优化和MSAA有关: Our transparent mesh rendering shader runs on an MSAA render target. Instead of storing all multisampled fragments in the transparency lists, which would increase memory consumption and bandwidth for our 8x MSAA, we store only those samples fully covered by this fragment shader invocation. To do this, we construct the current sample mask using the built-in GLSL gl_SampleID variable and compare it with the gl_SampleMaskIn[0] array element, which contains the computed sample coverage mask for the current fragment.
 
+注意也有对`gl_HelperInvocation`的判断，A helper invocation is a fragment shader invocation created solely for evaluating derivatives. 
 
+```glsl
+float alpha = clamp(baseColor.a * mat.clearcoatTransmissionThickness.z, 0.0, 1.0);
+bool isTransparent = (alpha > 0.01) && (alpha < 0.99);
+uint mask = 1 << gl_SampleID;
+if (isTransparent && !gl_HelperInvocation && ((gl_SampleMaskIn[0] & mask) == mask)) {
+    uint index = atomicAdd(pc.oit.atomicCounter.numFragments, 1);
+    if (index < pc.oit.maxOITFragments) {
+      uint prevIndex = imageAtomicExchange(kTextures2DInOut[pc.oit.texHeadsOIT], ivec2(gl_FragCoord.xy), index);
+      TransparentFragment frag;
+      frag.color = f16vec4(color, alpha);
+      frag.depth = gl_FragCoord.z;
+      frag.next  = prevIndex;
+      pc.oit.oitLists.frags[index] = frag;
+    }
+}
+```
 
+`oit.frag`就是真正去sort和blend的shader，从链表构造一个local array，插入排序，然后开始一个个blend.
+
+最后提了下内存消耗太大，可以考虑Per-Fragment Layered Sorting (PLS) and Layered Depth Images (LDI).
 
 
 
@@ -1328,7 +1349,18 @@ shader里面不追求完全的pbr准确，而是 keep it simple and shiny while 
 
 ### Putting it all together into a Vulkan demo
 
+有个很帅的frame graph。culling改了改，首先只对opaque的做视锥剔除了，因为半透的很少；理论上shadow pass和culling可以并行。
+
+最后推荐了点：
+
+* tile deferred shading or clustered shading:[clustered_shading_preprint.pdf](https://www.cse.chalmers.se/~uffe/clustered_shading_preprint.pdf)
+* [Physically Based Rendering in Filament](https://google.github.io/filament/Filament.md.html)
+* FrameGraph: Extensible Rendering Architecture in Frostbite 和 《Mastering Graphics Programming with Vulkan》
 
 
 
+## 感想
 
+整体来说书还算挺好的，也确实这次认真学了学，也主要是靠AI帮忙。AI真的很擅长帮我去补充这些知识的context，我可以随便问，让它问我，来回测试自己的理解。之前虽然看过，但是太不认真了，让我的脑细胞恢复一下。渲染没讲太深，前半部分主要是lightweight vk相关，后面开始PBR和一些架构上的东西，中间穿插一些渲染算法等等。学这个也确实是面试的时候感觉还是要会渲染，去新地方可能也要做点渲染，底层的东西还是要会。本来稍微纠结了下学UE还是这个，UE也是真的没时间学，做中学吧。（另外，文件大了typora的编辑体验确实一般）
+
+还留了两个TODO，其实是我比较关心的，1，vulkan的同步问题是怎么处理的，书里讲的太细节了，反而很少从大局上整体讲讲，其实就是想看到一个同步关系图之类的；2，其实算是1的子集，就是image barrier那些的处理。这个还是要配合源码、AI和demo再仔细看看。
