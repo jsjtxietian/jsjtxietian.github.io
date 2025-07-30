@@ -1278,3 +1278,57 @@ GPU上就是把culling代码port到GLSL，然后把cpu端的for循环port到comp
 
 
 ### Implementing shadows for directional lights
+
+这里的问题在于，如果光源理论上在无限远，那么如何构造一个正好渲染整个场景的正交投影矩阵
+
+To construct a projection matrix for a directional light, we calculate the axis-aligned bounding box of the entire scene, transform it into light-space using the light’s view matrix, and then use the bounds of the transformed box to construct an orthographic frustum that fully encloses this box.
+
+构造view矩阵：we first create two rotation matrices based on the theta and phi angles. These matrices are used to rotate a top-down light direction vector, (0, -1, 0), into the desired orientation. Using the resulting light direction, we build the light’s view matrix using the glm::lookAt() helper function. Since the light source encompasses the entire scene, its origin can be conveniently set to (0, 0, 0).
+
+构造projection：Since Vulkan uses a clip coordinate space where the z axis ranges from 0 to 1, we use the glm::orthoLH_ZO() helper function to create the projection matrix. However, this function follows the DirectX clip coordinate convention, so we must flip the z axis to match Vulkan’s expectation.
+
+这个因为是静态场景，所以shadow map可以按需更新，只在光源变化的时候更新阴影。一些牛逼的技术：Perspective Shadow Maps (PSMs)，[Light Space Perspective Shadow Maps | TU Wien – Research Unit of Computer Graphics](https://www.cg.tuwien.ac.at/research/vr/lispsm/)，Cascaded Shadow Maps (CSMs)，Parallel Split Shadow Maps (PSSMs) ，[www.realtimeshadows.com](https://www.realtimeshadows.com/)
+
+有validation error，提issue了[Vulkan Validation Error: Expected Image to have the same type as Result Type Image · Issue #39 · PacktPublishing/3D-Graphics-Rendering-Cookbook-Second-Edition](https://github.com/PacktPublishing/3D-Graphics-Rendering-Cookbook-Second-Edition/issues/39)
+
+### Implementing order-independent transparency
+
+现在的半透明渲染在Chap8讲过，this approach was limited in quality, it allowed transparent and opaque objects to be rendered together without any additional care or sorting, greatly simplifying the rendering pipeline.
+
+渲染半透明的办法：
+
+* [Depth Peeling Order Independent Transparency in Vulkan - Matthew Wellings](https://matthewwellings.com/blog/depth-peeling-order-independent-transparency-in-vulkan/)
+* [Casual Effects: Weighted, Blended Order-Independent Transparency](https://casual-effects.blogspot.com/2014/03/weighted-blended-order-independent.html)
+* Phenomenological Transparency: [Phenomenological Transparency | Research](https://research.nvidia.com/publication/2017-03_phenomenological-transparency)
+
+In Vulkan, it is possible to implement order-independent transparency (OIT) using per-pixel linked lists via atomic counters and load-store-atomic read-modify-write operations on textures. The algorithm works by constructing a linked list of fragments for each screen pixel, with each node storing color and depth values. Once these per-pixel lists are constructed, they can be sorted and blended using a fullscreen fragment shader. Essentially, this is a two-pass algorithm. 本章方法基于  [Oit And Indirect Illumination Using Dx11 Linked Lists | PPSX | Graphics Software | Computer Software and Applications](https://www.slideshare.net/slideshow/oit-and-indirect-illumination-using-dx11-linked-lists/3443500)
+
+First, we render opaque objects with standard shading. Next, we render transparent objects, adding shaded fragments to linked lists instead of rendering them directly to the framebuffer. Finally, we sort the linked lists and overlay the blended image onto the opaque framebuffer. 
+
+`transparent.frag`负责渲染不透明物体然后生成per pixel的链表，shader里用了[Early Fragment Test - OpenGL Wiki](https://www.khronos.org/opengl/wiki/Early_Fragment_Test)，The early_fragment_tests layout specifier ensures that the fragment shader is not executed unnecessarily if the fragment is discarded based on the depth test. This is crucial because any redundant invocation of this shader could result in corrupted transparency lists. 
+
+shader里面不追求完全的pbr准确，而是 keep it simple and shiny while focusing on transparency.
+
+
+
+
+
+
+
+### Loading texture assets asynchronously
+
+引入了VKMesh11Lazy，把加载贴图数据和创建vulkan texture拆成两步了，后一步只能在主线程做。因为默认id是0，是一个a white dummy texture. 注意就是load好了Update一下GPU material的贴图id，但是每次都go through all the materials and update them using the texture IDs from the cache. This is necessary because a single loaded texture can be referenced by multiple materials. Since we don’t track their relationships, the simplest approach is to update them all.
+
+改进方向：
+
+* A better approach might be to precreate empty textures and load images directly into these memory regions, especially since our data is already compressed into the BC7 format.
+* Instead of polling the processLoadedTextures() method every frame, texture updates could be integrated into the events system of your rendering engine.
+
+[lightweightvk/samples at master · corporateshark/lightweightvk](https://github.com/corporateshark/lightweightvk/tree/master/samples)
+
+### Putting it all together into a Vulkan demo
+
+
+
+
+
