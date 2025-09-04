@@ -1,0 +1,326 @@
+/* 自定义字体和排版优化 */
+
+/* 优化基础字体 */
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.01em;
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+/* 容器优化 */
+.container {
+  max-width: 800px;
+  padding: 0 20px;
+  margin: 0 auto;
+}
+
+/* 优化文章正文字体和排版 */
+.markdown-body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 1.6rem;
+  line-height: 1.6;
+  color: #333;
+  background-color: #fff;
+  padding: 30px 40px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.about-index .markdown-body {
+  padding: 30px 40px;
+}
+
+/* 隐藏friends页面的markdown-body容器 */
+.friend-index .markdown-body {
+  background-color: transparent;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* 英文段落使用更小的行高 */
+.markdown-body p:lang(en) {
+  line-height: 1.5;
+}
+
+/* 中文段落使用适中的行高 */
+.markdown-body p:lang(zh) {
+  line-height: 1.6;
+}
+
+/* 优化标题字体 */
+.markdown-body h1, 
+.markdown-body h2, 
+.markdown-body h3, 
+.markdown-body h4, 
+.markdown-body h5, 
+.markdown-body h6 {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 0.8em;
+  margin-bottom: 0.4em;
+  color: #222;
+}
+
+.markdown-body h1 {
+  font-size: 1.8em;
+  text-align: center;
+  margin-top: 0.2em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-body h2 {
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #eee;
+}
+
+.markdown-body h3 {
+  font-size: 1.3em;
+}
+
+.markdown-body h4 {
+  font-size: 1.2em;
+}
+
+.markdown-body h5 {
+  font-size: 1.1em;
+}
+
+.markdown-body h6 {
+  font-size: 1em;
+}
+
+/* 段落后面紧跟列表时，减少间距 */
+.markdown-body p + ul,
+.markdown-body p + ol {
+  margin-top: -0.2em;
+}
+
+/* 优化列表样式 */
+.markdown-body ul, 
+.markdown-body ol {
+  margin-top: 0;
+  margin-bottom: 8px;
+  padding-left: 1.8em;
+}
+
+.markdown-body li {
+  line-height: 1.6;
+  margin-bottom: 0.2em;
+}
+
+.markdown-body li:lang(en) {
+  line-height: 1.5;
+}
+
+.markdown-body li:lang(zh) {
+  line-height: 1.6;
+}
+
+.markdown-body ul ul,
+.markdown-body ul ol,
+.markdown-body ol ol,
+.markdown-body ol ul {
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+}
+
+/* 优化代码字体 */
+.markdown-body code {
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Consolas", "Roboto Mono", "Source Code Pro", monospace;
+  font-size: 1.4rem;
+  line-height: 1.6;
+  background-color: #f6f8fa;
+  color: #24292e;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+
+/* 优化引用块样式 */
+.markdown-body blockquote {
+  margin: 0.8em 0;
+  padding: 15px 25px;
+  border-left: 4px solid #0366d6;
+  background-color: #f6f8fa;
+  border-radius: 0 6px 6px 0;
+  color: #586069;
+}
+
+.markdown-body blockquote p {
+  margin-bottom: 0;
+}
+
+
+.markdown-body th, 
+.markdown-body td {
+  padding: 10px 12px;
+  border: 1px solid #dfe2e5;
+}
+
+.markdown-body th {
+  background-color: #f6f8fa;
+  font-weight: 600;
+}
+
+.markdown-body tr:nth-child(2n) {
+  background-color: #fbfcfd;
+}
+
+/* 优化链接样式 */
+.markdown-body a {
+  color: #0366d6;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.markdown-body a:hover {
+  color: #0366d6;
+  border-bottom: 1px solid #0366d6;
+  text-decoration: none;
+}
+
+/* 优化图片样式 */
+.markdown-body img {
+  border-radius: 6px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1.5em auto;
+}
+
+/* 文章标题优化 */
+.post-details .post-title {
+  font-size: 3rem;
+  font-weight: 600;
+  color: #222;
+  text-align: center;
+}
+
+/* 文章信息栏优化 */
+.post-attach {
+  font-size: 1.4rem;
+  color: #666;
+  text-align: center;
+}
+
+/* 优化导航栏 */
+.navbar ul li {
+  font-size: 1.65rem;
+  margin: 0 12px;
+}
+
+.navbar ul li a {
+  color: #666;
+  font-weight: 500;
+  padding: 5px 0;
+}
+
+.navbar ul li.active a {
+  color: #0366d6;
+}
+
+/* 调整Home页面标题和时间的颜色 */
+.post-item .time-m-d {
+  color: #888;
+  font-weight: 400;
+}
+
+.post-item .title {
+  color: #222;
+  font-weight: 450;
+}
+
+/* 导航栏 */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: calc(100vw - 100%);
+}
+
+.navbar ul li {
+  position: relative;
+  display: inline-block;
+  margin: 0 15px;
+  font-size: 1.65rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+.navbar ul li a {
+  color: var(--color-text-a);
+  font-weight: 500;
+  padding: 5px 0;
+}
+
+.navbar ul li.active a {
+  color: var(--color-text-a-active);
+}
+
+/* 移动端优化 */
+@media (max-width: 888px) {
+  .header {
+    padding: 20px 0;
+  }
+  
+  .avatar {
+    padding-bottom: 15px;
+    justify-content: center;
+  }
+  
+  .avatar img {
+    height: 80px;
+    width: 80px;
+  }
+  
+  .avatar .nickname {
+    font-size: 1.8rem;
+  }
+
+  .navbar {
+    padding-top: 10px;
+    padding-left: 0;
+    justify-content: center;
+  }
+  
+  .navbar ul li {
+    margin: 0 10px;
+    font-size: 1.5rem;
+  }
+  
+  .container {
+    width: 95%;
+  }
+  
+  /* 减小 markdown-body 在移动端的左右 padding，并增加宽度 */
+  .markdown-body {
+    padding: 10px 10px;
+  }
+  
+  .about-index .markdown-body {
+    padding: 10px 10px;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  
+  /* 进一步优化更小屏幕的显示效果 */
+  @media (max-width: 480px) {
+    .container {
+      padding: 5px 5px;
+    }
+    
+    .markdown-body {
+      padding: 10px 10px;
+    }
+    
+    .about-index .markdown-body {
+      padding: 10px 10px;
+    }
+  }
+}
