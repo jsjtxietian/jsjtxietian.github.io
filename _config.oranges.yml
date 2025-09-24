@@ -162,6 +162,10 @@ footer:
       icon: linkedin
       path: https://www.linkedin.com/in/%E5%A4%A9-%E8%B0%A2-17bba51a3/
     -
+      name: twitter
+      icon: twitter
+      path: https://x.com/xitin842468091
+    -
       name: email
       icon: envelope
       path: jsjtxietian@outlook.com
@@ -224,7 +228,7 @@ search:
 
 # 深/浅配色切换
 colorSwitch:
-  enable: true
+  enable: false
 
 # 文章分享
 postShare:
