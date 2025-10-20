@@ -31,6 +31,18 @@ date: 2025-09-24
 
 
 
+### Update clangd
+
+研究了下clangd和Unreal，太长不看：基本可以work，但是UE那边tooling有点差。
+
+简单用了下，占用内存10G左右，准确度没啥大问题，速度会卡下，第一次加载很慢很慢。我现在是客户端和引擎两个平行的文件夹，UE的build工具只会生成一个compile commands，我把里面的东西手动拆开来到两个文件夹里面，客户端的归客户端，引擎的归引擎，这俩文件夹放在一个workspace里是可用的。另外就是要跑单独的命令来生成compile commands，如果要每次build都自动生成是要改东西的，这算是UE不重视，不是clangd的问题。
+
+`UnrealBuildTool.exe -Target=ProductEditor Win64 Development -project="xxx.uproject" -mode=GenerateClangDatabase`
+
+优势是基于vscode，可以看其他脚本不用切换editor吗，另外gitlens很加分。
+
+
+
 ## Live++
 
 Live++是Unreal4.22开始支持的live coding背后的技术，可以hot reload C++代码。我就直接关掉UE自带的那个Live Coding，加上这个插件[LivePP2](https://github.com/brickadia/LivePP2)稍微设置下就行。只要不改头文件（因为不会跑UBT或者UHT），不管是改客户端的C++代码还是引擎的C++代码，也不管编辑器是10x还是vs还是rider，通通Ctrl+Alt+F11热重载，5s就能看到反馈，如风一般的写码体验。
@@ -57,6 +69,12 @@ Live++是Unreal4.22开始支持的live coding背后的技术，可以hot reload 
 * Qwen code，说实话代码能力我觉得一般，但是读读比较独立的代码也够了（可能是因为我没充钱，白嫖的每天2000免费次数）。优势就是cli工具的优势，以及白嫖额度够高。
 
 选择这俩的原因，一是因为可以白嫖，二是受到公司ip的限制，所以选择也不多。以后会去试试Claude Code + Kimi/ds or Codex之类，不过写代码暂时也不是我工作的瓶颈，就还好。
+
+
+
+### Update Claude Code
+
+试了下glm和ds，都还可以，ds聪明些。用来读代码非常方便，写就算了，除非我拆很细。
 
 
 
