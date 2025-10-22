@@ -6,7 +6,7 @@ tags:
 date: 2025-10-21
 ---
 
-如在[之前一篇blog](https://jsjtxietian.github.io/2025/09/24/unreal_tool/#Profiler)中所说，要在Windows上看C++游戏的性能的话，Superluminal非常好用，数据收集非常全面，但有一个小问题是在可视化展示方面——如果我想优化某个特定函数，想观察到那个特定函数内部的时间分布情况，Superluminal自带的Callgraph和Function list有点费眼睛（Source & Disassembly视图则只有一层），不如火焰图直观。
+如在[之前一篇blog](https://jsjtxietian.github.io/2025/09/24/unreal_tool/#Profiler)中所说，要在Windows上看C++游戏的性能的话，Superluminal非常好用，数据收集非常全面，但有一个小问题是在可视化展示方面——如果我想优化某个特定函数，想观察到那个特定函数内部的时间分布情况，或者我想看一段时间内整体的性能消耗，Superluminal自带的Callgraph和Function list有点费眼睛（Source & Disassembly视图则只有一层），不如火焰图直观。
 
 之前研究[Simpleperf](https://jsjtxietian.github.io/2025/02/12/simpleperf/)的时候就很喜欢[Firefox Profiler](https://profiler.firefox.com/)的火焰图UI，在我看来除了火焰图本身的优点以外，值得一提的是：
 
@@ -25,9 +25,9 @@ date: 2025-10-21
 
 然后因为WPA的火焰图实在是用起来不太舒服，我偶然找到了[profile-explorer](https://github.com/microsoft/profile-explorer)，准备玩玩。然后我突然看到了那个项目有个github的tag，[etw · GitHub Topics](https://github.com/topics/etw)，在下面就找到了我想要的，[xoofx/ultra: An advanced profiler for .NET Applications on Windows](https://github.com/xoofx/ultra)。没想到啊没想到，最后还是靠tag这么古老的方案，而AI没帮上忙。当然我也理解，ultra上写着大大的`for .NET Applications on Windows`，AI大概也没意识到其实这也可以用来直接采样native的程序。
 
-简单玩了下之后，给作者提了几点来讨论：[Issues when use ultra to profile native cpp game ](https://github.com/xoofx/ultra/issues/24)，作者没回我就点了个赞，倒是也还行。我自己fork下来简单改了改把我提的前两点都改了，基本能用了。当然这主要是给.Net程序用的，里面有一些我不需要的东西，但暂时不影响也不去管了。下次我再需要大量进行profile的时候应该会再改改测测，加点我想要的东西。
+简单玩了下之后，给作者提了几点来讨论：[Issues when use ultra to profile native cpp game ](https://github.com/xoofx/ultra/issues/24)，作者没回我就点了个赞，倒是也还行。我自己fork下来简单改了改把我提的前两点都改了，基本能用了。当然这主要是给.Net程序用的，里面有一些我不需要的东西，但暂时不影响也不去管了。下次我再需要大量进行profile的时候应该会再改改测测，加点我想要的东西（Update：刚说完就来了俩要用到这个的活儿，乌鸦嘴啊）。
 
-说实话这么细分的需求，没啥人做我是理解的，能找到的感觉真好（不用自己去解析ETW了）。然后一路下来发现那么多工具都可以参与讨论改进，做开源还是挺开心的其实。
+说实话这么细分的需求，没啥人做我是理解的，能找到的感觉真好（不用自己去解析ETW了）。然后一路下来发现那么多工具都可以参与讨论改进，参与开源还是挺开心的其实。
 
 
 
