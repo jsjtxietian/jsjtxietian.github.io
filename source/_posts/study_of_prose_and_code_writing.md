@@ -23,6 +23,10 @@ date: 2025-09-28
 
 简单读完之后我的感受是，啊我的脑子，我想多了解你，毕竟了解更多自己的脑子总是挺好的。鉴于我整个白天都在写代码了，所以为了我脑子的全面发展，我要多写作一些其他方面的文章，比如现在在干的这件事！
 
+> [!NOTE]
+>
+> 又读到一篇文章，[Relating Natural Language Aptitude to Individual Differences in Learning Programming Languages](https://www.nature.com/articles/s41598-020-60661-8)，实验表明，自然语言能力 (Language Aptitude) 是预测编程学习成果（如学习速度和准确性）的强有力指标，会和上面那篇paper结论稍微有些冲突，说明学习编程、阅读代码和编写代码可能是利用了不同大脑认知资源的独立活动。
+
 简单引申一下，这里很明显的一个后续方向是，AI时代的程序员会如何，我想有了Copliot帮助下的程序员在写代码的时候估计激活区域是会有些区别的，vibe有vibe的模式嘛。
 
 想起之前确实读到过一篇有一点点相关的，[Your Brain on ChatGPT: Accumulation of Cognitive Debt when Using an AI Assistant for Essay Writing Task](https://arxiv.org/abs/2506.08872)。如果说上一篇paper研究的是大脑在自力更生时是如何高效运作的，这一篇就是研究了当这种认知被外包给AI时会发生什么。实验将被试分成三组，根据相同的题目撰写论文，但每个小组的写作辅助工具不同，LLM组可以使用ChatGPT，搜索组可以使用搜索引擎，纯脑力组不使用任何工具，使用脑电图评估论文写作过程中的认知负荷。发现与完全依靠自己或使用搜索引擎的学生相比，使用LLM的学生的大脑网络连接性最弱，认知参与度最低，同时LLM组对自己所写论文的“所有权感”最低。所以说尽管LLM提供了极大的便利，它其实是有潜在的认知成本的，我可不希望有这种长期依赖AI会产生的“认知债务” ，因为凡是债务总有要还的那天。

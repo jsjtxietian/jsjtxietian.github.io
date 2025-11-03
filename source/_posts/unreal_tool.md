@@ -39,7 +39,7 @@ date: 2025-09-24
 
 `UnrealBuildTool.exe -Target=ProductEditor Win64 Development -project="xxx.uproject" -mode=GenerateClangDatabase`
 
-优势是基于vscode，可以看其他脚本不用切换editor吗，另外gitlens很加分。
+优势是基于vscode，可以看其他脚本不用切换editor，另外gitlens等插件很加分。
 
 
 
@@ -57,7 +57,7 @@ Live++是Unreal4.22开始支持的live coding背后的技术，可以hot reload 
 
 > using debug builds to debug your game is a great way to waste time. it can take minutes to load into a production level. release with symbols is the way to go, and if I need source line-level precision I just recompile the offending file with Live++ without optimizations.
 
-当然，又是一个付费工具:) 10欧一个月，这钱花得值，至少我不会和给10x付钱时候一样稍微有点犹豫。
+当然，又是一个付费工具。10欧一个月，我直接买了一年。这钱花得值，至少我不会和给10x付钱时候一样稍微有点犹豫。
 
 
 
@@ -71,10 +71,9 @@ Live++是Unreal4.22开始支持的live coding背后的技术，可以hot reload 
 选择这俩的原因，一是因为可以白嫖，二是受到公司ip的限制，所以选择也不多。以后会去试试Claude Code + Kimi/ds or Codex之类，不过写代码暂时也不是我工作的瓶颈，就还好。
 
 
-
 ### Update Claude Code
 
-试了下glm和ds，都还可以，ds聪明些。用来读代码非常方便，写就算了，除非我拆很细。
+试了下glm和ds，都还可以，ds聪明些。用来读代码非常方便，写UE C++就算了，除非我拆很细，但那时候我自己都写完了。
 
 
 
@@ -84,7 +83,8 @@ Profiler可以单独起一篇文章，这里大概说下我现在针对windows�
 
 * 先看Unreal insights，Unreal自带的性能分析工具。确实UE5的好用了很多，trace server的理念也很好。因为是Unreal引擎自身的打点，所以信息很多，看WP加载、函数耗时、Task依赖等都很好用。
 * 基于采样的[Superluminal](https://superluminal.eu/)，win上采样频率可以到8k hz，适合细看Unreal insights找到的耗时很高的函数，或者整体上看下整个时间段内热点在哪儿。当然，又是一个付费工具:) 免费的WPA或者vtune也都可以，Superluminal相对用着更顺滑一些，有一些统计功能很好用，也会捕捉线程之间的同步关系。我觉得唯一一个小的可以改进的地方就是希望支持一下火焰图这种可视化方式，我之前稍微研究了下把win下录制的etl文件丢给[samply](https://github.com/mstange/samply)然后转成firefox profiler可以读取的火焰图，但是那个库的pdb读取有点[问题](https://github.com/mstange/samply/issues/677)，后面有时间准备用C#自己写个。
-* 还是不知道为啥耗时就上芯片商提供的[Intel® VTune™ Profiler](https://www.intel.com/content/www/us/en/docs/vtune-profiler/get-started-guide/2025-4/overview.html)，这我以前写过，不细说[CPU性能 —— 单核篇 | jsjtxietian's blog](https://jsjtxietian.github.io/2024/08/19/perf_single_core/)
+  * Update：见[从ETW到Firefox Profiler火焰图](https://jsjtxietian.github.io/2025/10/21/etw2gecko/)
+* 还是不知道为啥耗时就上芯片商提供的[Intel® VTune™ Profiler](https://www.intel.com/content/www/us/en/docs/vtune-profiler/get-started-guide/2025-4/overview.html)，这我以前写过，不细说[CPU性能 —— 单核篇](https://jsjtxietian.github.io/2024/08/19/perf_single_core/)
 
 做Win平台真开心啊，工具多且好用。
 
