@@ -23,7 +23,7 @@ date: 2025-09-28
 
 简单读完之后我的感受是，啊我的脑子，我想多了解你，毕竟了解更多自己的脑子总是挺好的。鉴于我整个白天都在写代码了，所以为了我脑子的全面发展，我要多写作一些其他方面的文章，比如现在在干的这件事！
 
-> [!NOTE]
+> Update:
 >
 > 又读到一篇文章，[Relating Natural Language Aptitude to Individual Differences in Learning Programming Languages](https://www.nature.com/articles/s41598-020-60661-8)，实验表明，自然语言能力 (Language Aptitude) 是预测编程学习成果（如学习速度和准确性）的强有力指标，会和上面那篇paper结论稍微有些冲突，说明学习编程、阅读代码和编写代码可能是利用了不同大脑认知资源的独立活动。
 
