@@ -141,7 +141,11 @@ friends:
     meta:
   -
     nickname: Tracy Que
-    site: https://yunyaoque.com/  https://space.bilibili.com/378332
+    site: https://yunyaoque.com/
+    meta:
+  -
+    nickname: linxy
+    site: https://linxy.dev/
     meta:
 # 页脚信息
 footer:
