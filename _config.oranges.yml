@@ -147,6 +147,10 @@ friends:
     nickname: linxy
     site: https://linxy.dev/
     meta:
+  -
+    nickname: Laurenfrost
+    site: https://laurenfrost.ink/
+    meta:
 # 页脚信息
 footer:
   # social: 社交方式
