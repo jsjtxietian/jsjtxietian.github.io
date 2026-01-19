@@ -1,13 +1,13 @@
 ---
-title: cs431课程小结（施工中）
+title: cs431 课程小结（施工中）
 tags:
   - GameDev
   - Performance
 date: 2025-05-08
 ---
 
-年初给自己2025年定的技术上的目标是继续深入研究Concurrent Programming，从整理自己已经学过的开始吧。
-[cs431](https://github.com/kaist-cp/cs431) 这门课是去年年初看的，那时候正好在学rust，加上本身我对这些也感兴趣就头铁学习了一波，正好借此机会温习下课程内容，和自己学的其他东西对照起来整理下。整体来说这课还是很适合自学的，除了github仓库以外，有[课件](https://docs.google.com/presentation/d/1NMg08N1LUNDPuMxNZ-UMbdH13p8LXgMM3esbWRMowhU/edit?slide=id.p#slide=id.p)，有[youtube视频](https://www.youtube.com/playlist?list=PL5aMzERQ_OZ9j40DJNlsem2qAGoFbfwb4)。我自己也做了大部分的[作业](https://github.com/jsjtxietian/ParallelComputing/tree/master/cs431)，感觉也是颇有收获。
+年初给自己 2025 年定的技术上的目标是继续深入研究 Concurrent Programming，从整理自己已经学过的开始吧。
+[cs431](https://github.com/kaist-cp/cs431) 这门课是去年年初看的，那时候正好在学 rust，加上本身我对这些也感兴趣就头铁学习了一波，正好借此机会温习下课程内容，和自己学的其他东西对照起来整理下。整体来说这课还是很适合自学的，除了 github 仓库以外，有[课件](https://docs.google.com/presentation/d/1NMg08N1LUNDPuMxNZ-UMbdH13p8LXgMM3esbWRMowhU/edit?slide=id.p#slide=id.p)，有[youtube 视频](https://www.youtube.com/playlist?list=PL5aMzERQ_OZ9j40DJNlsem2qAGoFbfwb4)。我自己也做了大部分的[作业](https://github.com/jsjtxietian/ParallelComputing/tree/master/cs431)，感觉也是颇有收获。
 
 ## Lock-based concurrency
 
@@ -23,7 +23,7 @@ We want an easy-to-use, always-safe high-level API
 
 ### Rust API
 
-然后话题就到了Rust上，解释了下为啥是Best fit for this course: Rust’s type system based on **ownership** and **lifetime**,  the essence of concurrency (The principal challenge in the era of massive parallelism is managing **shared mutable states**). 之后正常介绍了下Rust：
+然后话题就到了 Rust 上，解释了下为啥是 Best fit for this course: Rust’s type system based on **ownership** and **lifetime**,  the essence of concurrency (The principal challenge in the era of massive parallelism is managing **shared mutable states**). 之后正常介绍了下 Rust：
 
 * **Key ideas:**
   * **Discipline:** disallowing shared mutable accesses by default
@@ -32,11 +32,11 @@ We want an easy-to-use, always-safe high-level API
   * Statically analyzing the safety of shared mutable accesses (both for sequential and concurrent programs)
   * Explicitly marking those code that needs manual inspection
 
-接着就是介绍了下Rust有哪些safe的api: Thread & ScopedThread, Arc, Send & Sync，Lock & LockGuard，Mutex & Condvar & RwLock, 以及crossbeam的一些api。也提供了之前的课件：[rust-school-2023-snu - Google Slides](https://docs.google.com/presentation/d/1LbiQ1Z3FTjp1144GRwEj3EPNj-RspAthlsq3a0PCQHw/edit?slide=id.g204abd30794_0_475#slide=id.g204abd30794_0_475)
+接着就是介绍了下 Rust 有哪些 safe 的 api: Thread & ScopedThread, Arc, Send & Sync，Lock & LockGuard，Mutex & Condvar & RwLock, 以及 crossbeam 的一些 api。也提供了之前的课件：[rust-school-2023-snu - Google Slides](https://docs.google.com/presentation/d/1LbiQ1Z3FTjp1144GRwEj3EPNj-RspAthlsq3a0PCQHw/edit?slide=id.g204abd30794_0_475#slide=id.g204abd30794_0_475)
 
 ### Lock
 
-接下来是一些简单的实现，包括Spinlock, ticket lock, CLH lock, MCS lock, MCS parking lock等等。
+接下来是一些简单的实现，包括 Spinlock, ticket lock, CLH lock, MCS lock, MCS parking lock 等等。
 
 TODO
 
@@ -46,7 +46,7 @@ TODO
 
 
 
-看得出来老师很喜欢这篇paper：[When Concurrency Matters: Behaviour-Oriented Concurrency | Proceedings of the ACM on Programming Languages](https://dl.acm.org/doi/10.1145/3622852)，我准备在cs431的作业实现的部分整理。
+看得出来老师很喜欢这篇 paper：[When Concurrency Matters: Behaviour-Oriented Concurrency | Proceedings of the ACM on Programming Languages](https://dl.acm.org/doi/10.1145/3622852)，我准备在 cs431 的作业实现的部分整理。
 
 
 
@@ -95,13 +95,13 @@ Reader: trying to read a consistent state (e.g. 2)
 
 ## Lock-free concurrency
 
-如果还要更好的性能，就要进入lock free的领域了。首先就是给定义 ( [Optimistic Locking Overview](https://dl.acm.org/citation.cfm?id=2183558) )：
+如果还要更好的性能，就要进入 lock free 的领域了。首先就是给定义 ( [Optimistic Locking Overview](https://dl.acm.org/citation.cfm?id=2183558) )：
 
 * **Lock’s limitations**: no guarantee of progress
 * **Lock freedom**: one of the ongoing operation is eventually completed, the whole system’s progress is guaranteed
 * **Wait freedom**: every ongoing operation is eventually completed, example: [chaoran.me/assets/pdf/wfq-ppopp16.pdf](http://chaoran.me/assets/pdf/wfq-ppopp16.pdf)
 
-Key idea for lock freedom是single-instruction commit. **Designating an RMW instruction as an operation’s commit point**: atomically reading from & writing to a location (e.g., CAS), single-instruction commit is RMW’s motivation!
+Key idea for lock freedom 是 single-instruction commit. **Designating an RMW instruction as an operation’s commit point**: atomically reading from & writing to a location (e.g., CAS), single-instruction commit is RMW’s motivation!
 
 ### Data structures
 

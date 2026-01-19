@@ -5,7 +5,7 @@ tags:
 date: 2025-05-19
 ---
 
-说来也很神奇，我第一次读到《麦克白》的原文，是在音乐剧Hamilton中的这一段：
+说来也很神奇，我第一次读到《麦克白》的原文，是在音乐剧 Hamilton 中的这一段：
 
 > “Tomorrow and tomorrow and tomorrow
 > Creeps in this petty pace from day to day”
@@ -16,7 +16,7 @@ date: 2025-05-19
 > Madison is Banquo, Jefferson’s Macduff
 > And Birnam Wood is Congress on its way to Dunsinane
 
-那时候我并没有读过《麦克白》，当时只觉得引用的这一段韵律挺不错的，也没去深究下去。最近疯狂阅读莎士比亚，读到相关情节，才意识到Lin-Manuel Miranda确实引用得很好。麦克白在剧末的独白原文如下：
+那时候我并没有读过《麦克白》，当时只觉得引用的这一段韵律挺不错的，也没去深究下去。最近疯狂阅读莎士比亚，读到相关情节，才意识到 Lin-Manuel Miranda 确实引用得很好。麦克白在剧末的独白原文如下：
 
 > She should have died hereafter;
 > There would have been a time for such a word.
@@ -80,7 +80,7 @@ date: 2025-05-19
 
 这时间不是麦克白与理查二世感受到的那种机械的单调的时间，而更像是自然的时间，自然状态下那有规律的时间，摆脱了王权的束缚的时间，人可以平静而快乐地生活的时间。
 
-Hamilton的终曲也回到了时间这个话题，Who Lives, Who Dies, Who Tells Your Story:
+Hamilton 的终曲也回到了时间这个话题，Who Lives, Who Dies, Who Tells Your Story:
 
 > I stop wasting **time** on tears
 > I live another fifty years
@@ -108,6 +108,6 @@ Hamilton的终曲也回到了时间这个话题，Who Lives, Who Dies, Who Tells
 > Oh, I can't wait to see you again
 > It's only a matter of **time**
 
-Eliza尝试继承Hamilton的意志，在自己余下有限的生命里赋予时间以意义，用讲故事的方式去对抗客观时间对于记忆的消磨。可惜，麦克白夫妇再也没有这样的机会了，活着，不可能，死了，更不可能。
+Eliza 尝试继承 Hamilton 的意志，在自己余下有限的生命里赋予时间以意义，用讲故事的方式去对抗客观时间对于记忆的消磨。可惜，麦克白夫妇再也没有这样的机会了，活着，不可能，死了，更不可能。
 
-最后，推荐[脱节的时代 (豆瓣)](https://book.douban.com/subject/34919009/)的第7章给本文提供了许多养料；推荐[莎士比亚的动荡世界 (豆瓣)](https://book.douban.com/subject/26286757/)的第16章，了解一下莎士比亚的时代对于时间的看法。
+最后，推荐[脱节的时代 (豆瓣)](https://book.douban.com/subject/34919009/)的第 7 章给本文提供了许多养料；推荐[莎士比亚的动荡世界 (豆瓣)](https://book.douban.com/subject/26286757/)的第 16 章，了解一下莎士比亚的时代对于时间的看法。

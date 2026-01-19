@@ -45,7 +45,7 @@ date: 2023-06-07
 
 ### 一种直观的理解方式
 
-[Pro .NET Benchmarking](https://aakinshin.net/prodotnetbenchmarking/) 这本书提到的Sanglard interpretation: **a floating-point number is represented by a sign, a window between two consecutive powers of two, and an offset within that window.** All numbers can be splitted into nonoverlapped intervals (windows): [0.125;0.25), [0.25; 0.5), [0.5; 1), [1; 2), [2; 4), and so on. Each window also can be split into nonoverlapped subintervals (buckets). 
+[Pro .NET Benchmarking](https://aakinshin.net/prodotnetbenchmarking/) 这本书提到的 Sanglard interpretation: **a floating-point number is represented by a sign, a window between two consecutive powers of two, and an offset within that window.** All numbers can be splitted into nonoverlapped intervals (windows): [0.125;0.25), [0.25; 0.5), [0.5; 1), [1; 2), [2; 4), and so on. Each window also can be split into nonoverlapped subintervals (buckets). 
 
 If we want to convert a number to the IEEE 754 notation, we should find the window that contains this number. The index of the window is the exponent value. Next, we should find the bucket inside the window that contains the number. The bucket index (offset) is the mantissa value. If the number is negative, we should do the same for the absolute value of this number and put 1 in the sign bit.
 
@@ -53,11 +53,11 @@ If we want to convert a number to the IEEE 754 notation, we should find the wind
 0 10011100 11011100110101100101001
 * 符号位：0
 * 指数位：156，E − Ebias = 156 − 127 = 29 **=>** Window is [2<sup>29</sup>; 2<sup>30</sup>]
-* 小数位：7236393 **=>** Window被分割为2<sup>23</sup>个bucket，该数的bucket index为7236393
-* Window范围为[536,870,912; 1,073,741,824]，按照2<sup>23</sup>个bucket切割，每个bucket为64
+* 小数位：7236393 **=>** Window 被分割为 2<sup>23</sup>个 bucket，该数的 bucket index 为 7236393
+* Window 范围为[536,870,912; 1,073,741,824]，按照 2<sup>23</sup>个 bucket 切割，每个 bucket 为 64
 * 最后结果：536870912 + 64 * 7236393 = 1000000064
 
-[Floating Point Visually Explained](https://fabiensanglard.net/floating_point_visually_explained/) 这里有另外的例子，用这种方法表示6.1：
+[Floating Point Visually Explained](https://fabiensanglard.net/floating_point_visually_explained/) 这里有另外的例子，用这种方法表示 6.1：
 
 ![img](./../Assets/float/floating_point_window.svg)
 
@@ -100,9 +100,9 @@ A half float has a maximum exponent of 15, the precision is 32 which is the smal
 
 
 
-### 例1，游戏时间
+### 例 1，游戏时间
 
-一个例子，如果记录游戏时间，每帧+0.0333，什么时候float开始失效：
+一个例子，如果记录游戏时间，每帧 +0.0333，什么时候 float 开始失效：
 
 * floating point numbers have a precision of 0.03125 at exponent value 18. So, exponent 18 is close, but it’s precision is smaller than what we want – aka the precision is still ok.
 * things break down at exponent 19, which has precision of 0.0625. Time is actually moving almost twice as fast in this case!
@@ -126,7 +126,7 @@ if you are doing any sort of precise timing - physics, animation, sound playback
 
 
 
-### 例2，渲染
+### 例 2，渲染
 
 **Jitter**：The matrix multiply is operating on large values with sparse 32-bit floating-point representations. A small change in the object or viewer position may not result in any change as roundoff errors produce the same results, but then suddenly roundoff error jumps to the next representable value and the object appears to jitter.
 
@@ -136,7 +136,7 @@ if you are doing any sort of precise timing - physics, animation, sound playback
 
 
 
-**Depth Buffer Precision（z-fighting）**：the depth buffer cannot tell which object is in front of which. The artifacts tend to flicker as the viewer moves around. 
+**Depth Buffer Precision (z-fighting)**：the depth buffer cannot tell which object is in front of which. The artifacts tend to flicker as the viewer moves around. 
 
 For orthographic projections, this usually isn’t a concern because the relationship between eye space z, z<sub>eye</sub>, and window space z, z<sub>window</sub>, is **linear**. In perspective projections, this relationship is **nonlinear**. Objects near the viewer have small z<sub>eye</sub>values, with plenty of potential z<sub>window</sub> values to map to, allowing the depth buffer to resolve visibility correctly. The farther away an object, the larger its z<sub>eye</sub>. Due to the nonlinear relationship, these z<sub>eye</sub>values have much less z<sub>window</sub>values to map to, so the depth buffer has trouble resolving visibility of distant objects close to each other, which creates z-fighting artifacts.
 
@@ -167,7 +167,7 @@ float epsilon_difference(float a, float b)
 
 
 
-引入UPL的概念： **units of least precision between inputs**.  Boost offers a function called `float_distance` to get the distance between values in ULPs, but it’s about an order of magnitude slower than the approaches discussed so far.
+引入 UPL 的概念： **units of least precision between inputs**.  Boost offers a function called `float_distance` to get the distance between values in ULPs, but it’s about an order of magnitude slower than the approaches discussed so far.
 
 **Adjacent floats (of the same sign) have adjacent integer values when reinterpreted as such**（参考上文的理解方法）, calculating the ULPs between values :
 
@@ -246,33 +246,33 @@ why Python gives the result for `9007199254740993 == 9007199254740993.0` as `Fal
 
 ## 跨平台计算同步
 
-[从零开始实现浮点数跨平台确定性](https://zhuanlan.zhihu.com/p/682531986)：确保不同平台上，**每一步计算的每个bit都必须相同**。需要一套日志系统，尽量详尽地记录确定性系统中每一步中间结果。把那些浮点数们，使用二进制序列化库，写到磁盘上。
+[从零开始实现浮点数跨平台确定性](https://zhuanlan.zhihu.com/p/682531986)：确保不同平台上，**每一步计算的每个 bit 都必须相同**。需要一套日志系统，尽量详尽地记录确定性系统中每一步中间结果。把那些浮点数们，使用二进制序列化库，写到磁盘上。
 
 
 
 ### 硬件差异
 
-* older x86 with x87 instructions内部浮点单元使用了80位精度（[Extended precision - Wikipedia](https://en.wikipedia.org/wiki/Extended_precision)）；主流硬件对IEEE 754-2008基本做到了支持，X64和arm64支持，，SSE、AVX、NEON同样支持IEEE 754-2008，乃至CUDA也支持，并且x64浮点数默认64位内部精度。
-* 特定指令：FMA（fused multiply–add）指令，即C99 fmaf()，就不在IEEE规范内；还有SSE经典的_mm_rsqrt_ps()倒数平方根指令， 与NEON的对应版本有效数字位数不同
-* IEEE 754-2008保证了大部分浮点数确定性，但意外总是存在的，尤其在处理特殊值`+0.0`、`-0.0`、`NaN`的时候
-* long double问题，80位还是64位：[long double - Wikipedia](https://en.wikipedia.org/wiki/Long_double)
+* older x86 with x87 instructions 内部浮点单元使用了 80 位精度（[Extended precision - Wikipedia](https://en.wikipedia.org/wiki/Extended_precision)）；主流硬件对 IEEE 754-2008 基本做到了支持，X64 和 arm64 支持，，SSE、AVX、NEON 同样支持 IEEE 754-2008，乃至 CUDA 也支持，并且 x64 浮点数默认 64 位内部精度。
+* 特定指令：FMA（fused multiply–add）指令，即 C99 fmaf()，就不在 IEEE 规范内；还有 SSE 经典的_mm_rsqrt_ps() 倒数平方根指令，与 NEON 的对应版本有效数字位数不同
+* IEEE 754-2008 保证了大部分浮点数确定性，但意外总是存在的，尤其在处理特殊值`+0.0`、`-0.0`、`NaN`的时候
+* long double 问题，80 位还是 64 位：[long double - Wikipedia](https://en.wikipedia.org/wiki/Long_double)
 * [std::simd - Rust](https://doc.rust-lang.org/std/simd/index.html)：Portable SIMD is consistent between targets, This has one notable exception: a handful of older architectures (e.g. armv7 and powerpc) **flush subnormal f32 values to zero**. On these architectures, subnormal f32 input values are replaced with zeros, and any operation producing subnormal f32 values produces zeros instead. This doesn’t affect most architectures or programs.、
 
 
 
 ### 编译器优化
 
-* 浮点数不遵守结合律、分配律：指令重排、常量合并等优化，恰恰可以视为结合律、分配律的应用；编译器有可能将标量（FPU）版本的浮点数计算转化为矢量（SIMD）版本；对非常接近0的小数字执行FTZ（flush-to-zero）优化；FMA（fused multiply–add）优化。以上优化都可能引入额外的不确定性。
-* C/C++默认优化级别较高。需要手动关闭fast-math，-ffp-model=precise（clang/gcc）、/fp:precise（MSVC）。还需手动关闭浮点数融合指令，即我们前文所述的FMA乘加指令、平方根倒数指令等，-ffp-contract=off（clang/gcc）、/fp:contract（MSVC VS2022以上）。另外，在Rust中混编C/C++时也要开启这些标签。
+* 浮点数不遵守结合律、分配律：指令重排、常量合并等优化，恰恰可以视为结合律、分配律的应用；编译器有可能将标量（FPU）版本的浮点数计算转化为矢量（SIMD）版本；对非常接近 0 的小数字执行 FTZ（flush-to-zero）优化；FMA（fused multiply–add）优化。以上优化都可能引入额外的不确定性。
+* C/C++ 默认优化级别较高。需要手动关闭 fast-math，-ffp-model=precise（clang/gcc）、/fp:precise（MSVC）。还需手动关闭浮点数融合指令，即我们前文所述的 FMA 乘加指令、平方根倒数指令等，-ffp-contract=off（clang/gcc）、/fp:contract（MSVC VS2022 以上）。另外，在 Rust 中混编 C/C++ 时也要开启这些标签。
 
 
 
 ### 第三方库
 
-* IEEE规范了浮点数的基础运算，但没有规范sin、cos、exp等复杂函数。这导致了不同版本的libc中，它们的实现不保证相同（比如MSVC和GCC里就不同）。
+* IEEE 规范了浮点数的基础运算，但没有规范 sin、cos、exp 等复杂函数。这导致了不同版本的 libc 中，它们的实现不保证相同（比如 MSVC 和 GCC 里就不同）。
 * 整个确定性系统都不能依赖外部时间，乃至一切外部输入。随机数会出现在某些算法与容器中，如哈希表。
-* libc内置的qsort是不稳定的，不同实现的版本，可能导致两个值相等，内部字段不同的对象顺序颠倒。
-* 序列化：推荐二进制序列化方案，拷字节引入的麻烦总是较少。Rust推荐rkyv、bincode。C/C++的protobuf、messagepack理论上可用
+* libc 内置的 qsort 是不稳定的，不同实现的版本，可能导致两个值相等，内部字段不同的对象顺序颠倒。
+* 序列化：推荐二进制序列化方案，拷字节引入的麻烦总是较少。Rust 推荐 rkyv、bincode。C/C++ 的 protobuf、messagepack 理论上可用
 
 
 
@@ -293,7 +293,7 @@ why Python gives the result for `9007199254740993 == 9007199254740993.0` as `Fal
 ## 性能
 
 * Floating point number division is faster than integer division because of the exponent part requires only a relatively cheap fixed-cost subtraction. [performance - Why float division is faster than integer division in c++? ](https://stackoverflow.com/questions/55832817/why-float-division-is-faster-than-integer-division-in-c#)
-* Denormal numbers的性能问题 [hardware-effects/floating-point](https://github.com/Kobzol/hardware-effects/tree/master/floating-point)
+* Denormal numbers 的性能问题 [hardware-effects/floating-point](https://github.com/Kobzol/hardware-effects/tree/master/floating-point)
 
 
 
@@ -306,7 +306,7 @@ why Python gives the result for `9007199254740993 == 9007199254740993.0` as `Fal
 * 资料汇编：[Floating-point further reading - by Mike Acton - AltDevArts](https://www.altdevarts.com/p/floating-point-further-reading) 
 * Links：[Exposing Floating Point – Bartosz Ciechanowski](https://ciechanow.ski/exposing-floating-point/)
 * Links：[21 « November « 2017 « The blog at the bottom of the sea](https://blog.demofox.org/2017/11/21/)
-* boost的文档：[Floating-point Comparison - 1.63.0](https://www.boost.org/doc/libs/1_63_0/libs/math/doc/html/math_toolkit/float_comparison.html)
+* boost 的文档：[Floating-point Comparison - 1.63.0](https://www.boost.org/doc/libs/1_63_0/libs/math/doc/html/math_toolkit/float_comparison.html)
 
 
 
@@ -323,7 +323,7 @@ why Python gives the result for `9007199254740993 == 9007199254740993.0` as `Fal
 - gpgpu for science：Round，fp16
 - 定点数
 - [The pitfalls of verifying floating-point computations](https://hal.science/file/index/docid/281429/filename/floating-point-article.pdf)
-- pro .net benchmark的其他问题性能
+- pro .net benchmark 的其他问题性能
 - [the secret life of NaN](https://anniecherkaev.com/the-secret-life-of-nan)
 - [c - Printf width specifier to maintain precision of floating-point value - Stack Overflow](https://stackoverflow.com/questions/16839658/printf-width-specifier-to-maintain-precision-of-floating-point-value/19897395#19897395)
 - [Hexadecimal Floating-Point Constants - Exploring Binary](https://www.exploringbinary.com/hexadecimal-floating-point-constants/)

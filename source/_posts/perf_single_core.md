@@ -1,5 +1,5 @@
 ---
-title: CPU性能 —— 单核篇
+title: CPU 性能 —— 单核篇
 tags:
   - Performance
 date: 2024-08-19
@@ -79,7 +79,7 @@ There are internal buffers in the CPU that keep track of information about µops
 
 ![image-20241017181902586](../Assets/perf_single_core/image-20241017181846901.png)
 
-TMA observes the execution of a program by monitoring a specific set of performance events and then calculates metrics based on predefined formulas. The TMA hierarchy of performance bottlenecks：
+TMA observes the execution of a program by monitoring a specific set of performance events and then calculates metrics based on predefined formulas. The TMA hierarchy of performance bottlenecks:
 
 ![image-20241017181902586](../Assets/perf_single_core/image-20241017181902586.png)
 
@@ -91,7 +91,7 @@ Analysis tools such as Intel VTune Profiler, AMD uprof, and Linux perf can calcu
 
 ### Roofline
 
-Throughput-oriented performance model：The “roofline” in this model expresses the fact that the performance of an application cannot exceed the machine’s capabilities. Every function and every loop in a program is limited by either compute or memory capacity of a machine.
+Throughput-oriented performance model: The “roofline” in this model expresses the fact that the performance of an application cannot exceed the machine’s capabilities. Every function and every loop in a program is limited by either compute or memory capacity of a machine.
 
 ![Frame 480](./../Assets/perf_single_core/Frame_480.png)
 
@@ -115,7 +115,7 @@ Top-Down microarchitecture analysis and Roofline performance analysis should usu
 
 
 
-### Mental Model：Four Cornerstones of CPU Performance
+### Mental Model: Four Cornerstones of CPU Performance
 
 主要资料来自：[Four Cornerstones of CPU Performance. | Easyperf](https://easyperf.net/blog/2022/10/17/Four-Cornerstones-of-CPU-Performance)
 
@@ -137,7 +137,7 @@ How well instructions progress through the CPU pipeline. This includes fetching,
 * Ideal: No stalls in the execution pipeline, 100% of the CPU bandwidth is utilized. 
 * Worst: Instructions compete for a particular execution resource.
 
-#### Execution Latency（Data Dependency Chains）
+#### Execution Latency (Data Dependency Chains)
 
 How well a CPU can process a long sequence of instructions, where each of them depends on a previous one.
 * Ideal: massively parallel application few/short dependencies.
@@ -152,7 +152,7 @@ How well a CPU can process a long sequence of instructions, where each of them d
 ### Memory Bound 
 
 * Cache-Friendly Data Structures
-  * folly的哈希表 [CppCon 2017: Matt Kulukundis “Designing a Fast, Efficient, Cache-friendly Hash Table, Step by Step”](https://www.youtube.com/watch?v=ncHmEUmJZf4)
+  * folly 的哈希表 [CppCon 2017: Matt Kulukundis “Designing a Fast, Efficient, Cache-friendly Hash Table, Step by Step”](https://www.youtube.com/watch?v=ncHmEUmJZf4)
 * Access data sequentially
   * [loop_interchange_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/memory_bound/loop_interchange_1)
   * [loop_interchange_2 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/memory_bound/loop_interchange_2)
@@ -161,7 +161,7 @@ How well a CPU can process a long sequence of instructions, where each of them d
 * Aligning and padding
   * [mem_alignment_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/memory_bound/mem_alignment_1)
   * [misaligned-access](https://github.com/Kobzol/hardware-effects/tree/master/misaligned-access)
-  * Structure splitting、Pointer inlining等技巧
+  * Structure splitting、Pointer inlining 等技巧
 * Tune the code for memory hierarchy: loop blocking (tiling), cache-oblivious algorithms...
   * [loop_tiling_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/memory_bound/loop_tiling_1)
   * [Cache-Oblivious Algorithms - Algorithmica](https://en.algorithmica.org/hpc/external-memory/oblivious/)
@@ -175,18 +175,18 @@ How well a CPU can process a long sequence of instructions, where each of them d
 * Memory order violation
   * [mem_order_violation_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/memory_bound/mem_order_violation_1)
 * Dynamic memory allocation: jemalloc, arena...
-  * 无脑换mimalloc
+  * 无脑换 mimalloc
   * C++ PMR
-* 注意一些hardware effects
-  * Store-to-load forwarding的[4k-aliasing](https://github.com/Kobzol/hardware-effects/tree/master/4k-aliasing)
-  * 8-way associative cache的[cache-conflicts](https://github.com/Kobzol/hardware-effects/tree/master/cache-conflicts)
+* 注意一些 hardware effects
+  * Store-to-load forwarding 的[4k-aliasing](https://github.com/Kobzol/hardware-effects/tree/master/4k-aliasing)
+  * 8-way associative cache 的[cache-conflicts](https://github.com/Kobzol/hardware-effects/tree/master/cache-conflicts)
   * 内存刷新 [dram-refresh](https://github.com/Kobzol/hardware-effects/tree/master/dram-refresh)
   * write combining：[write-combining](https://github.com/Kobzol/hardware-effects/tree/master/write-combining)
 
 
 
 
-牢记Brendan Gregg的图：
+牢记 Brendan Gregg 的图：
 
 ![latency](./../Assets/perf_single_core/latency.png)
 
@@ -205,14 +205,14 @@ How well a CPU can process a long sequence of instructions, where each of them d
   * [vectorization_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/core_bound/vectorization_1)
   * [vectorization_2 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/core_bound/vectorization_2)
   * clang：`-Rpass-analysis=loop-vectorize -Rpass=loop-vectorize -Rpass-missed=loop-vectorize`  看下为啥不能自动向量化
-  * 可以看下mwish的系列文章：[SIMD Extensions and AVX](https://blog.mwish.me/2024/03/24/SIMD-Extensions-and-AVX/)
+  * 可以看下 mwish 的系列文章：[SIMD Extensions and AVX](https://blog.mwish.me/2024/03/24/SIMD-Extensions-and-AVX/)
   * [Vectorization part7. Tips for writing vectorizable code. | Easyperf](https://easyperf.net/blog/2017/11/10/Tips_for_writing_vectorizable_code)
-* 去掉dependency chain
+* 去掉 dependency chain
   * [dep_chains_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/core_bound/dep_chains_1)
   * [dep_chains_2 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/core_bound/dep_chains_2)
   * [data-dependency](https://github.com/Kobzol/hardware-effects/tree/master/data-dependency)
-* 注意一些hardware effects
-  * denormal float的性能下降 [floating-point](https://github.com/Kobzol/hardware-effects/tree/master/floating-point)
+* 注意一些 hardware effects
+  * denormal float 的性能下降 [floating-point](https://github.com/Kobzol/hardware-effects/tree/master/floating-point)
 
 
 
@@ -226,7 +226,7 @@ How well a CPU can process a long sequence of instructions, where each of them d
   * cmov [branches_to_cmov_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/bad_speculation/branches_to_cmov_1)
 * 其他
   * 去掉虚函数 [virtual_call_mispredict at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/bad_speculation/virtual_call_mispredict)
-  * 去掉conditional store [conditional_store_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/bad_speculation/conditional_store_1)
+  * 去掉 conditional store [conditional_store_1 at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/bad_speculation/conditional_store_1)
 
 
 
@@ -255,15 +255,15 @@ How well a CPU can process a long sequence of instructions, where each of them d
 * PGO
   * [pgo at master](https://github.com/jsjtxietian/perf-ninja-solution/tree/master/labs/misc/pgo)
 * 大小核
-  * 检测：["Cutting Edge Chipset" Scheduling](https://sherief.fyi/post/cutting-edge-chipset-scheduling/) ，TBB之类的库也有代码可以参考
-  * [从E-core/P-core的stream性能差异开始 - 知乎](https://zhuanlan.zhihu.com/p/689705368)
-  * [再讲一个p-core和e-core的不同 - 知乎](https://zhuanlan.zhihu.com/p/714172034)
+  * 检测：["Cutting Edge Chipset" Scheduling](https://sherief.fyi/post/cutting-edge-chipset-scheduling/) ，TBB 之类的库也有代码可以参考
+  * [从 E-core/P-core 的 stream 性能差异开始 - 知乎](https://zhuanlan.zhihu.com/p/689705368)
+  * [再讲一个 p-core 和 e-core 的不同 - 知乎](https://zhuanlan.zhihu.com/p/714172034)
 
 
 
 ## More
 
-* Denis Bakhvalov大佬的 [Blog](https://easyperf.net/) 和书 [perf-book](https://github.com/dendibakh/perf-book)
+* Denis Bakhvalov 大佬的 [Blog](https://easyperf.net/) 和书 [perf-book](https://github.com/dendibakh/perf-book)
 * [Daniel Lemire's blog](https://lemire.me/blog/)
 * [Kobzol/hardware-effects: Demonstration of various hardware effects.](https://github.com/Kobzol/hardware-effects/tree/master)
 * [Algorithms for Modern Hardware - Algorithmica](https://en.algorithmica.org/hpc/)
@@ -272,6 +272,6 @@ How well a CPU can process a long sequence of instructions, where each of them d
 
 
 
-欢迎提issue交流：[Issues · jsjtxietian/jsjtxietian.github.io](https://github.com/jsjtxietian/jsjtxietian.github.io/issues)
+欢迎提 issue 交流：[Issues · jsjtxietian/jsjtxietian.github.io](https://github.com/jsjtxietian/jsjtxietian.github.io/issues)
 
 [^1]: Ahmad Yasin. A top-down method for performance analysis and counters architecture. pages 35–44, 03 2014. ISBN 978-1-4799-3606-9. doi: 10.1109/ISPASS.2014.6844459.
