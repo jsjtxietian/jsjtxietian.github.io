@@ -1,0 +1,55 @@
+---
+title: Curiosity Log 6
+tags:
+  - Curiosity
+date: 2026-03-24
+---
+
+更新迟到了几天，因为周末去三亚参加好朋友波博的婚礼了！现在三亚的天气不错，婚礼也很迷人，觉得自己穿上西装也是人模狗样的。周六晚上我们几个软院遗老一起大富翁到三点钟，也是很舒适了，这希望这样的时光更长一些。就是感觉周日逛的水族馆的水分有点多，30 分钟就逛完了，另外看到真人扮演成美人鱼在水里表演总感觉不是很舒适，明明已经是是水族馆了，还玩把人当成景观客体这一套。
+
+最近读到了《追忆似水年华》的第二卷《在少女们身旁》，顺带着还读了点《普鲁斯特的空间》。慢慢熟悉了普鲁斯特的写法，虽然其实对我而言本就很能接受，毕竟已经受过了一些更后期的文学的熏陶。而且从第一卷的第二部分斯万之恋开始，写法又变得很线性了，就慢慢读吧。
+
+对象 Vibe Coding 出来的奶茶记录网页：[奶茶记录](https://milk-tea-tracker.netlify.app/)，AI 带来的工具民主化真好啊（虽然她还是没法停下喝奶茶）。
+
+---
+
+
+
+* 好酷，必须第一个介绍，[Autoresearching Apple's "LLM in a Flash" to run Qwen 397B locally](https://x.com/danveloper/status/2034353876753592372)：`The entire 209GB model streams from SSD through a custom Metal compute pipeline.` 本地能跑 397B 的 Qwen 模型了，想法不错，Apple 的硬件也是真的不错，等最近风头过了就建仓 Apple。个人想法，在这个意义上 Apple 是不是可以算是 Local LLM 这一派的硬件厂商？
+
+* 关于 karpathy 的 [autoresearch](https://github.com/karpathy/autoresearch)，同意 [Thorsten Ball](https://registerspill.thorstenball.com/p/joy-and-curiosity-78) 的看法：`The idea of running an agent in a loop isn’t new, but what I find fascinating: how small this repo is, how small the codebase is, how direct and clear the instructions and the workflow are, and the meta thing of this being exactly what the non-nano researchers at the big labs are doing, at least kind of.` 这里也有用来做算子优化的，[如何用 Opus 4.6 写出一个比开源社区更快的 gpu 算子](https://zhuanlan.zhihu.com/p/2017212755590005622)，有来优化内存分配的，[Performance: 53% faster parse+render, 61% fewer allocations](https://github.com/Shopify/liquid/pull/2056).
+* [NVIDIA GTC Keynote 2026](https://www.youtube.com/watch?v=jw_o0xr8MWU&t=4438s)，只看懂了这个：`Inference is the Workload, Tokens are the New Commodity, Compute is Revenue.`其他硬件相关的基本没看懂。除了老黄的还有这个 [The single biggest bottleneck to scaling AI compute](https://www.youtube.com/watch?v=mDG_Hx3BSUE)，电力和土地不太会是限制，也许到 2030 年，最大的瓶颈将回归到芯片制造本身（ASML 的 EUV 光刻机），还有内存危机似乎也没到结束的时候。
+* 认真研读了 Unsloth 创始人的访谈：[LLMs for Everyone | Pre-training, Fine-Tuning, Scaling RL, Open Source](https://www.youtube.com/watch?v=v9c00Ty5Z7U&t=4142s)，热情满满，被感染到了，所以我现在也准备去看看 Unsloth 的教程玩玩微调了（当然作者是推荐不要每个热点都追的，太容易疲劳了，应该专注自己感兴趣的一个小方面）；作者还建议徒手推导反向传播试试，也是个 todo 了。Unsloth 也出了个 [Unsloth Studio](https://x.com/UnslothAI/status/2033926272481718523)，更一体化了，可以玩玩。
+
+* [这里](https://blog.colinbreck.com/adapting-to-ai-reflections-on-productivity/)有个不错的比喻，用 AI 就像是在一家无限量供应热狗的公司工作，AI 让你胃口大开，但如果不懂得自我调节，这种无限的产出会让人筋疲力尽。以及老生常谈的：`Context switching is antithetical to the optimal experience of flow and AI tends to encourage context switching.` 
+
+* [eval + builtins：比 tools 更好的 Agent 架构范式](https://zhuanlan.zhihu.com/p/2018257242286209022)，我基本也是这个想法，可惜 UE 的那个 Python 脚本绑定因为训练数据量太小了，用起来还是不太行。很早用的这个 [UnityMCP](https://github.com/jackwrichards/UnityMCP) 也是这个思路，此想法在 [Tool Call 的未来](https://zhuanlan.zhihu.com/p/2000790356535559443) 也有所指。
+* [mcp-windbg](https://github.com/svnscha/mcp-windbg) 又救我命，有个修改了虚表导致的 ABI 不一致的 bug 就是靠 gpt-5.4 + WinDBG MCP 查出来的，听说 [ChatDBG](https://github.com/plasma-umass/ChatDBG) 也不错，但似乎只支持 gdb 和 lldb。
+* 读了 Claude Code 官方的一些文章，[Lessons from Building Claude Code: How We Use Skills](https://x.com/trq212/status/2033949937936085378) 确实是还不错的综述，喜欢这两句：`If you’re publishing a skill that is primarily about knowledge, try to focus on information that pushes Claude out of its normal way of thinking` 和 `Give Claude the information it needs, but give it the flexibility to adapt to the situation`. 也补了下去年的 [How we built our multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system).
+* [Tech legend Stewart Brand on Musk, Bezos and his extraordinary life](https://www.theguardian.com/technology/2026/feb/25/tech-legend-stewart-brand-on-musk-bezos-and-his-extraordinary-life-we-dont-need-to-passively-accept-our-fate): `The strapline of the Whole Earth Catalog was “access to tools”, and it was meant in the broadest sense.` 他很强调 Maintenance, 很有趣，联系到 [Mario Zechner on X](https://x.com/badlogicgames/status/2033798602372288947): `keeping the complexity off the bay is really hard, espwcially if you go full agent orchestration.`
+* 关于 benchmark 的反思，[Quo vadis, LLM benchmarks](https://florianbrand.com/posts/benches-2026)，`Benchmarks are not meant to be taken at face value, but rather indicate the (relative) strengths of models and the general progress in the respective area of the benchmark... However, it is important to know what benchmarks are for and to look at the implementations (and data) of benchmarks to know what it measures and within which constraints it measures.`
+
+* [The Robotic Tortoise & the Robotic Hare](https://tomtunguz.com/local-vs-cloud-speed/) 有个实验还挺有意思的，Qwen 35B 竟然“打败”了 Claude Opus 4.5，`Faster responses mean more rounds of revision before a meeting ends or attention drifts. It’s different for agentic coding workflows & complex codebases, where slower work may lead to better outcomes. But for everyday tasks, faster models can enable tighter feedback loops. Tighter loops can produce better outcomes.` 一方面当然是本地模型也大有可为，另一方面这也是我们做性能优化的意义所在，不仅仅包括 LLM 的推理优化，也包括相关的工具优化。
+* 说到大模型和小模型，这篇 paper 还是挺有意思的，[Diverse Task Experts Are Dense Around Pretrained Weights](https://www.alphaxiv.org/abs/2603.12228). 
+* 看不懂但是好厉害：[Attention Residuals 回忆录](https://kexue.fm/archives/11664)。
+* 一些可视化集合：[A Visual Guide to Attention Variants in Modern LLMs](https://magazine.sebastianraschka.com/p/visual-attention-variants)，[Vision Transformers - by Mayank Pratap Singh](https://www.vizuaranewsletter.com/p/vision-transformers)，[LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/)
+* [Why Node.js Needs a Virtual File System](https://blog.platformatic.dev/why-nodejs-needs-a-virtual-file-system): `Without AI, this would not have been a holiday side project. It just wouldn’t have happened.`
+* 新看到的一些不错的工具：[Obsidian Reader](https://x.com/kepano/status/2034374124269940898)，UCLA AGI Lab 的 [EurekaClaw](https://github.com/eurekaclaw/eurekaclaw)，[ast-grep](https://github.com/ast-grep/ast-grep)，给 Agent 的浏览器 [Lightpanda](https://github.com/lightpanda-io/browser)，专门给 AI 搞了 MCP 的 [stackprofile](https://jbachorik.github.io/posts/stackprofile-jfr)，浏览器的 Agent [sitegeist](https://github.com/badlogic/sitegeist)，[chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp)等等
+* [Software isn’t dying, but it is becoming more honest](https://www.helenmin.com/blog/software-is-becoming-more-honest)：`Software isn’t dying; it’s just getting more honest. We’re moving toward a world where we pay for the work (the base) and the value (the outcome).Subscription-based billing won't remain the standard, and that’s actually a win for everyone… `
+* [Some Things Just Take Time](https://lucumr.pocoo.org/2026/3/20/some-things-just-take-time/)，另外这篇也不错，[It has never been about the typing](https://blog.s-schoener.com/2026-03-18-not-about-the-typing/): `Identity requires some sort of “what makes me different from everyone else”, and a lot of these differentiators have been obliterated lately`.
+* LLM 对这种小创作者的影响值得关注，[Some Words on WigglyPaint](https://beyondloom.com/blog/onwigglypaint.html) : `NONE of these sites are created by me, or with anything remotely resembling my permission. The sites are *slop*; slapdash imitations pieced together with the help of so-called “Large Language Models” (LLMs). The closer you look at them, the stranger they appear, full of vague, repetitive claims, outright false information, and plenty of unattributed (stolen) art. This is what LLMs are best at: quickly fabricating plausible simulacra of real objects to mislead the unwary.` 一方面是创作民主化，一方面是 slop 泛滥，有趣。
+* 竟然已经有这种 AI 语气收集了：[AI Writing Tropes to Avoid](https://gist.github.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1)，最近用 gpt-5.4 深有所感。
+* [Why is Claude an Electron App?](https://www.dbreunig.com/2026/02/21/why-is-claude-an-electron-app.html)  作者的回答：`Some of the engineers working on the app worked on Electron back in the day, so preferred building non-natively. It’s also a nice way to share code so we’re guaranteed that features across web and desktop have the same look and feel. Finally, Claude is great at it.` 另外，[Claude is an Electron App because we’ve lost native](https://tonsky.me/blog/fall-of-native/)， [Windows Native App Development Is a Mess](https://domenic.me/windows-native-dev/)，确实如此。
+* 大佬发话：[Turns out that DLSS5 was after all a generic Snapchat beautify post filter. No per pixel developer control](https://x.com/SebAaltonen/status/2035005805691371778)，笑死我了。Neural texture 确实是个不错的想法，但啥时候能有统一的标准和接口呢？又有，[Sebastian Aaltonen on X](https://x.com/SebAaltonen/status/2033916147364425736): `Codex was a massive help in the porting, but if you want high performance result, you need to validate everything, use GPU debugger and GPU profiler, etc. Know what is the best data layout and explain that to the LLM, etc. Good AGENTS.MD rules helps of course. But doesn't solve.`
+
+* 制作人推荐了这个《羊蹄山之魂》的[分享](https://mp.weixin.qq.com/s/rklgtYGoQctErPl88cPmTQ)，利用事件卡组的思路来进行任务节奏控制，规划开放世界的内容释放逻辑，确实是蛮不错的思路。我下意识就想到了这不是和推荐系统很像么，玩家经历过的事件就是历史的数据，基于这个去选择要推荐的游戏内容，当然游戏的不同之处在于有个主线系统。现在是 LLM 的天下，也可以考虑用大模型来做推荐，或者是定时发数据去云端，或者本地跑个 8B 模型，感觉都很有搞头。
+* [Visibility Buffer and Deferred Rendering in DOOM: The Dark Ages](https://www.youtube.com/watch?v=fXakIV1OFes)，DOOM 也换 Visibility Buffer 和 Deferred Rendering 了，还记得以前学它那个 Forward+ 的时候，也忘光了其实。
+* Eric Lengyel 大佬关于高性能字体渲染的博客：[A Decade of Slug](https://terathon.com/blog/decade-slug.html)，说来他那几本关于游戏引擎的书我还一直没看呢。。。
+* Superluminal 的新文章：[A tale about fixing eBPF spinlock issues in the Linux kernel.](https://rovarma.com/articles/a-tale-about-fixing-ebpf-spinlock-issues-in-the-linux-kernel/)
+* 学点虚拟内存技巧也不错，[Powerful Page Mapping Techniques.](https://www.computerenhance.com/p/powerful-page-mapping-techniques)
+* jemalloc 复活了，[Investing in Infrastructure: Meta’s Renewed Commitment to jemalloc](https://engineering.fb.com/2026/03/02/data-infrastructure/investing-in-infrastructure-metas-renewed-commitment-to-jemalloc/).
+* 关于时间，[Temporal: The 9-Year Journey to Fix Time in JavaScript](https://bloomberg.github.io/js-blog/post/temporal/).
+* [How many branches can your CPU predict](https://x.com/lemire/status/2034393396777796077)，测量方法是真的不错，给 CPU 上压力看看它能记住多少长度的随机序列，AMD YES！另外注意到了 Lemire 大佬用的库 [counters: performance counters in C++](https://github.com/lemire/counters) 没有 Windows 支持，相似的 [perf-cpp](https://github.com/jmuehlig/perf-cpp) 也没有。
+* 神人字体 [z80-sans](https://github.com/nevesnunes/z80-sans)，把汇编做进了字体里，牛，太牛了。
+* [good people don't get blocked](https://x.com/sonofalli/status/2033651124520292795)，唉，确实，要 get the job done 才是本事。
+* [Willingness to look stupid is a genuine moat in creative work](https://sharif.io/looking-stupid): ` Good Ideas, and I mean this in the broadest sense – research directions, startup ideas, premises for a novel – almost always sound stupid at first. They often make the person who came up with them look stupid. So if a truly *Good Idea* always starts out by looking unserious, then the only way to have one is to get comfortable producing stupid things.` 另外，`Your goal shouldn’t be to share something good. It should just be to share something *at all*. Even if it isn’t good.` 可能这也是 Curiosity Log 的初衷之一，最近更新倒是都即时，但确实挤压了我写其他文章的时间，唉，时间。
