@@ -5,17 +5,17 @@ tags:
 date: 2026-03-24
 ---
 
-更新迟到了几天，因为周末去三亚参加好朋友波博的婚礼了！现在三亚的天气不错，婚礼也很迷人，觉得自己穿上西装也是人模狗样的。周六晚上我们几个软院遗老一起大富翁到三点钟，也是很舒适了，这希望这样的时光更长一些。就是感觉周日逛的水族馆的水分有点多，30 分钟就逛完了，另外看到真人扮演成美人鱼在水里表演总感觉不是很舒适，明明已经是是水族馆了，还玩把人当成景观客体这一套。
+更新迟到了几天，因为周末去三亚参加好朋友波博的婚礼了！现在三亚的天气不错，婚礼也很迷人，觉得自己穿上西装也是人模狗样的。周六晚上我们几个软院遗老一起大富翁到三点钟，也是很舒适了，真希望这样的时光更长一些。就是感觉周日逛的水族馆的水分有点多，30 分钟就逛完了，另外看到真人扮演成美人鱼在水里表演总感觉不是很舒适，明明已经是是水族馆了，还玩把人当成景观客体这一套，真没意思。
 
-最近读到了《追忆似水年华》的第二卷《在少女们身旁》，顺带着还读了点《普鲁斯特的空间》。慢慢熟悉了普鲁斯特的写法，虽然其实对我而言本就很能接受，毕竟已经受过了一些更后期的文学的熏陶。而且从第一卷的第二部分斯万之恋开始，写法又变得很线性了，就慢慢读吧。
+最近读到了《追忆似水年华》的第二卷《在少女们身旁》，顺带着还读了点《普鲁斯特的空间》。慢慢熟悉了普鲁斯特的写法，毕竟我早已受到了一些更后期的文学的熏陶，而且从第一卷的第二部分斯万之恋开始，写法又变得很线性了，就慢慢读吧。真怀念上学时候的读书会呀，读《骑兵军》《小城畸人》等等。
 
-对象 Vibe Coding 出来的奶茶记录网页：[奶茶记录](https://milk-tea-tracker.netlify.app/)，AI 带来的工具民主化真好啊（虽然她还是没法停下喝奶茶）。
+对象 Vibe Coding 出来的奶茶记录网页：[奶茶记录](https://milk-tea-tracker.netlify.app/)，AI 带来的工具民主化真好啊（虽然她还是没法停下喝奶茶）。Vibe Coding 确实令人上瘾，token 翻译为代币吧，对应 AI 就是老虎机。
 
 ---
 
 
 
-* 好酷，必须第一个介绍，[Autoresearching Apple's "LLM in a Flash" to run Qwen 397B locally](https://x.com/danveloper/status/2034353876753592372)：`The entire 209GB model streams from SSD through a custom Metal compute pipeline.` 本地能跑 397B 的 Qwen 模型了，想法不错，Apple 的硬件也是真的不错，等最近风头过了就建仓 Apple。个人想法，在这个意义上 Apple 是不是可以算是 Local LLM 这一派的硬件厂商？
+* 好酷，必须第一个介绍，[Autoresearching Apple's "LLM in a Flash" to run Qwen 397B locally](https://x.com/danveloper/status/2034353876753592372)：`The entire 209GB model streams from SSD through a custom Metal compute pipeline.` 本地能跑 397B 的 Qwen 模型了，想法不错，Apple 的硬件也是真的不错。个人想法，在这个意义上 Apple 是不是可以算是 Local LLM 这一派的硬件厂商？等最近风头过了就建仓 Apple。
 
 * 关于 karpathy 的 [autoresearch](https://github.com/karpathy/autoresearch)，同意 [Thorsten Ball](https://registerspill.thorstenball.com/p/joy-and-curiosity-78) 的看法：`The idea of running an agent in a loop isn’t new, but what I find fascinating: how small this repo is, how small the codebase is, how direct and clear the instructions and the workflow are, and the meta thing of this being exactly what the non-nano researchers at the big labs are doing, at least kind of.` 这里也有用来做算子优化的，[如何用 Opus 4.6 写出一个比开源社区更快的 gpu 算子](https://zhuanlan.zhihu.com/p/2017212755590005622)，有来优化内存分配的，[Performance: 53% faster parse+render, 61% fewer allocations](https://github.com/Shopify/liquid/pull/2056).
 * [NVIDIA GTC Keynote 2026](https://www.youtube.com/watch?v=jw_o0xr8MWU&t=4438s)，只看懂了这个：`Inference is the Workload, Tokens are the New Commodity, Compute is Revenue.`其他硬件相关的基本没看懂。除了老黄的还有这个 [The single biggest bottleneck to scaling AI compute](https://www.youtube.com/watch?v=mDG_Hx3BSUE)，电力和土地不太会是限制，也许到 2030 年，最大的瓶颈将回归到芯片制造本身（ASML 的 EUV 光刻机），还有内存危机似乎也没到结束的时候。
@@ -52,4 +52,4 @@ date: 2026-03-24
 * [How many branches can your CPU predict](https://x.com/lemire/status/2034393396777796077)，测量方法是真的不错，给 CPU 上压力看看它能记住多少长度的随机序列，AMD YES！另外注意到了 Lemire 大佬用的库 [counters: performance counters in C++](https://github.com/lemire/counters) 没有 Windows 支持，相似的 [perf-cpp](https://github.com/jmuehlig/perf-cpp) 也没有。
 * 神人字体 [z80-sans](https://github.com/nevesnunes/z80-sans)，把汇编做进了字体里，牛，太牛了。
 * [good people don't get blocked](https://x.com/sonofalli/status/2033651124520292795)，唉，确实，要 get the job done 才是本事。
-* [Willingness to look stupid is a genuine moat in creative work](https://sharif.io/looking-stupid): ` Good Ideas, and I mean this in the broadest sense – research directions, startup ideas, premises for a novel – almost always sound stupid at first. They often make the person who came up with them look stupid. So if a truly *Good Idea* always starts out by looking unserious, then the only way to have one is to get comfortable producing stupid things.` 另外，`Your goal shouldn’t be to share something good. It should just be to share something *at all*. Even if it isn’t good.` 可能这也是 Curiosity Log 的初衷之一，最近更新倒是都即时，但确实挤压了我写其他文章的时间，唉，时间。
+* [Willingness to look stupid is a genuine moat in creative work](https://sharif.io/looking-stupid): ` Good Ideas, and I mean this in the broadest sense – research directions, startup ideas, premises for a novel – almost always sound stupid at first. They often make the person who came up with them look stupid. So if a truly *Good Idea* always starts out by looking unserious, then the only way to have one is to get comfortable producing stupid things.` 另外，`Your goal shouldn’t be to share something good. It should just be to share something *at all*. Even if it isn’t good.` 可能这也是 Curiosity Log 的初衷之一，最近更新倒是都很即时，但确实挤压了我写其他文章的时间，唉，时间。
