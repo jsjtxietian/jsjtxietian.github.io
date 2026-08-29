@@ -1,19 +1,4 @@
-<% if (page.type === 'tags') { %>
-  <section class="page-shell collection-page tags-page">
-    <header class="page-heading">
-      <h1>Tags</h1>
-      <p>标签已经合并到 <a href="<%- url_for('/archives/') %>">Archive</a>，也可以在这里浏览。</p>
-    </header>
-    <div class="tag-cloud">
-      <%- list_tags({style: false, show_count: true, class: 'tag-cloud-list'}) %>
-    </div>
-  </section>
-<% } else if (page.type === 'categories') { %>
-  <section class="page-shell collection-page categories-page">
-    <header class="page-heading"><h1>Categories</h1></header>
-    <div class="category-tree"><%- list_categories({style: false, show_count: true}) %></div>
-  </section>
-<% } else if (page.type === 'friends') { %>
+<% if (page.type === 'friends') { %>
   <section class="page-shell collection-page friends-page">
     <header class="page-heading">
       <h1>Friends</h1>
