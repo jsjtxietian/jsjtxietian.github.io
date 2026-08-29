@@ -32,6 +32,31 @@
   window.addEventListener('scroll', updateScrollUI, { passive: true });
   backToTop?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
+  const archivePage = document.querySelector('.archive-page');
+  if (archivePage) {
+    const selectedTag = new URLSearchParams(window.location.search).get('tag');
+    const encodedTag = selectedTag ? encodeURIComponent(selectedTag) : '';
+    const rows = [...archivePage.querySelectorAll('.archive-row')];
+    let visibleCount = 0;
+
+    rows.forEach((row) => {
+      const visible = !encodedTag || row.dataset.tags.split(',').includes(encodedTag);
+      row.hidden = !visible;
+      if (visible) visibleCount += 1;
+    });
+    archivePage.querySelectorAll('.archive-year').forEach((year) => {
+      year.hidden = !year.querySelector('.archive-row:not([hidden])');
+    });
+    archivePage.querySelectorAll('[data-archive-tag]').forEach((link) => {
+      link.classList.toggle('is-active', link.dataset.archiveTag === encodedTag);
+    });
+
+    const summary = archivePage.querySelector('[data-archive-summary]');
+    if (summary && selectedTag) summary.textContent = `${visibleCount} 篇关于 #${selectedTag} 的文章。`;
+    const empty = archivePage.querySelector('.archive-empty');
+    if (empty) empty.hidden = visibleCount !== 0;
+  }
+
   const articleBody = document.querySelector('[data-article-body]');
   if (articleBody) {
     const text = articleBody.textContent.trim();

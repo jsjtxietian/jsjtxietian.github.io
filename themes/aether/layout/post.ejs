@@ -34,7 +34,7 @@
         <% if (page.tags && page.tags.length) { %>
           <span class="meta-divider"></span>
           <div class="article-tags">
-            <% page.tags.each(function(tag) { %><a href="<%- url_for(tag.path) %>">#<%- tag.name %></a><% }) %>
+            <% page.tags.each(function(tag) { %><a href="<%- url_for('/archives/') %>?tag=<%- encodeURIComponent(tag.name) %>">#<%- tag.name %></a><% }) %>
           </div>
         <% } %>
         <span class="meta-divider"></span>
