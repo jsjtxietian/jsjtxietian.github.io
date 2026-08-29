@@ -1,0 +1,21 @@
+<%
+  let documentTitle = config.title;
+  if (page.title) documentTitle = page.title + ' · ' + config.title;
+  const description = page.description || page.ogdescription || config.description || theme.home.description;
+%>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="<%- config.author %>">
+  <meta name="description" content="<%- description %>">
+  <meta name="theme-color" content="<%- theme.accent %>">
+  <title><%- documentTitle %></title>
+  <link rel="icon" href="<%- url_for('/images/Sun.png') %>" type="image/png">
+  <link rel="apple-touch-icon" href="<%- url_for('/images/Sun.png') %>">
+  <link rel="alternate" type="application/atom+xml" title="<%- config.title %>" href="<%- url_for('/atom.xml') %>">
+  <link rel="stylesheet" href="<%- url_for('/css/aether.css') %>">
+  <% if (theme.mathjax.enable && is_post()) { %>
+    <script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]},svg:{fontCache:'global'}};</script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <% } %>
+</head>

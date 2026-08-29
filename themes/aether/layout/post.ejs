@@ -1,0 +1,90 @@
+<% if (page.type === 'tags') { %>
+  <section class="page-shell collection-page tags-page">
+    <header class="page-heading">
+      <h1>Tags</h1>
+      <p>标签已经合并到 <a href="<%- url_for('/archives/') %>">Archive</a>，也可以在这里浏览。</p>
+    </header>
+    <div class="tag-cloud">
+      <%- list_tags({style: false, show_count: true, class: 'tag-cloud-list'}) %>
+    </div>
+  </section>
+<% } else if (page.type === 'categories') { %>
+  <section class="page-shell collection-page categories-page">
+    <header class="page-heading"><h1>Categories</h1></header>
+    <div class="category-tree"><%- list_categories({style: false, show_count: true}) %></div>
+  </section>
+<% } else if (page.type === 'friends') { %>
+  <section class="page-shell collection-page friends-page">
+    <header class="page-heading">
+      <h1>Friends</h1>
+      <p>一些好朋友。</p>
+    </header>
+    <div class="friend-grid">
+      <% (theme.friends || []).forEach(function(friend, index) { %>
+        <a class="friend-card" href="<%- friend.site %>" target="_blank" rel="noopener">
+          <span class="friend-index"><%= String(index + 1).padStart(2, '0') %></span>
+          <strong><%- friend.nickname %></strong>
+          <span class="friend-url"><%- friend.site.replace(/^https?:\/\//, '').replace(/\/$/, '') %></span>
+          <span class="friend-arrow" aria-hidden="true">↗</span>
+        </a>
+      <% }) %>
+    </div>
+    <% if (page.content) { %><div class="prose standalone-prose"><%- page.content %></div><% } %>
+  </section>
+<% } else if (page.type === 'about') { %>
+  <section class="page-shell about-page">
+    <header class="page-heading">
+      <h1>About</h1>
+    </header>
+    <div class="prose standalone-prose"><%- page.content %></div>
+  </section>
+<% } else { %>
+  <% const hasToc = theme.toc.enable && toc(page.content, {list_number: false}); %>
+  <article class="article-shell">
+    <header class="article-header page-shell<%= hasToc ? ' has-toc' : ' no-toc' %>">
+      <a class="article-back" href="<%- url_for('/') %>">← Back to writing</a>
+      <h1><%- page.title %></h1>
+      <div class="article-meta">
+        <time datetime="<%- page.date.format('YYYY-MM-DD') %>"><%- page.date.format('YYYY.MM.DD') %></time>
+        <% if (page.tags && page.tags.length) { %>
+          <span class="meta-divider"></span>
+          <div class="article-tags">
+            <% page.tags.each(function(tag) { %><a href="<%- url_for(tag.path) %>">#<%- tag.name %></a><% }) %>
+          </div>
+        <% } %>
+        <span class="meta-divider"></span>
+        <span class="reading-time" data-reading-time>— min read</span>
+      </div>
+    </header>
+
+    <div class="article-grid page-shell<%= hasToc ? ' has-toc' : ' no-toc' %>">
+      <div class="article-main">
+        <% if (hasToc) { %>
+          <details class="mobile-toc">
+            <summary>On this page <span>＋</span></summary>
+            <%- toc(page.content, {list_number: false}) %>
+          </details>
+        <% } %>
+        <div class="prose" data-article-body><%- page.content %></div>
+        <nav class="article-navigation" aria-label="Adjacent posts">
+          <% if (page.next) { %>
+            <a class="article-nav-item is-prev" href="<%- url_for(page.next.path) %>">
+              <span>Previous</span><strong><%- page.next.title %></strong>
+            </a>
+          <% } else { %><span></span><% } %>
+          <% if (page.prev) { %>
+            <a class="article-nav-item is-next" href="<%- url_for(page.prev.path) %>">
+              <span>Next</span><strong><%- page.prev.title %></strong>
+            </a>
+          <% } %>
+        </nav>
+      </div>
+      <% if (hasToc) { %>
+        <aside class="article-toc">
+          <p>On this page</p>
+          <%- toc(page.content, {list_number: false}) %>
+        </aside>
+      <% } %>
+    </div>
+  </article>
+<% } %>

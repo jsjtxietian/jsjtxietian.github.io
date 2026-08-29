@@ -1,0 +1,16 @@
+<section class="page-shell taxonomy-page">
+  <header class="page-heading compact">
+    <h1>#<%- page.tag %></h1>
+    <p><%= page.posts.length %> posts in this collection.</p>
+  </header>
+  <div class="post-list taxonomy-list">
+    <% page.posts.sort('date', -1).each(function(item) { %>
+      <article class="post-row">
+        <time><%- item.date.format('YYYY.MM.DD') %></time>
+        <div class="post-row-main"><h3><a href="<%- url_for(item.path) %>"><%- item.title %></a></h3></div>
+        <a class="row-arrow" href="<%- url_for(item.path) %>" tabindex="-1" aria-hidden="true">↗</a>
+      </article>
+    <% }) %>
+  </div>
+  <%- partial('_partial/pagination') %>
+</section>

@@ -1,0 +1,64 @@
+# Aether — a quiet, reading-first theme.
+accent: '#3978f6'
+
+home:
+  title: I delight in the truth.
+  description: 关于阅读、技术、游戏，以及好奇心。
+
+nav:
+  - name: Home
+    path: /
+  - name: Archives
+    path: /archives/
+  - name: Friends
+    path: /friends/
+  - name: About
+    path: /about/
+
+search:
+  enable: true
+  path: /search.xml
+  placeholder: Search notes and ideas…
+
+toc:
+  enable: true
+
+code_copy:
+  enable: true
+
+mathjax:
+  enable: true
+
+friends:
+  - nickname: mwish
+    site: https://blog.mwish.me/
+  - nickname: Hejie Cui
+    site: https://hejiecui.com/
+  - nickname: Linda
+    site: https://lindadaism.com/
+  - nickname: Xiangming Ka
+    site: https://xiangmingka.wixsite.com/website
+  - nickname: Tracy Que
+    site: https://yunyaoque.com/
+  - nickname: linxy
+    site: https://linxy.dev/
+  - nickname: Laurenfrost
+    site: https://laurenfrost.ink/
+
+footer:
+  note: Veritatem Dilexi
+  links:
+    - name: GitHub
+      url: https://github.com/jsjtxietian
+    - name: LinkedIn
+      url: https://www.linkedin.com/in/tian-xie-17bba51a3/
+    - name: X
+      url: https://x.com/xitin842468091
+    - name: Email
+      url: mailto:jsjtxietian@outlook.com
+    - name: RSS
+      url: /atom.xml
+    - name: Douban
+      url: https://www.douban.com/people/138209256/
+    - name: Source
+      url: https://github.com/jsjtxietian/jsjtxietian.github.io

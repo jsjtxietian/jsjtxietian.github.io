@@ -1,0 +1,28 @@
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="<%- url_for('/') %>" aria-label="<%- config.title %> home">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name"><%- theme.nickname || config.author %></span>
+    </a>
+
+    <nav class="site-nav" id="site-nav" aria-label="Primary navigation">
+      <% theme.nav.forEach(function(item) { 
+        const currentPath = page.path ? '/' + page.path : '/';
+        const active = item.path === '/' ? is_home() : currentPath.startsWith(item.path);
+      %>
+        <a href="<%- url_for(item.path) %>" class="nav-link<%= active ? ' is-active' : '' %>"><%- item.name %></a>
+      <% }) %>
+    </nav>
+
+    <div class="header-actions">
+      <% if (theme.search.enable) { %>
+        <button class="icon-button search-trigger" type="button" aria-label="Open search" title="Search (Ctrl K)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+        </button>
+      <% } %>
+      <button class="menu-toggle" type="button" aria-label="Toggle navigation" aria-controls="site-nav" aria-expanded="false">
+        <span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>

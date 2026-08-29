@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="<%= config.language || 'en' %>">
+  <%- partial('_partial/head') %>
+  <body class="<%= is_post() ? 'is-post' : 'is-page' %>">
+    <div class="reading-progress" aria-hidden="true"><span></span></div>
+    <%- partial('_partial/header') %>
+    <main id="main-content" class="site-main">
+      <%- body %>
+    </main>
+    <%- partial('_partial/footer') %>
+    <%- partial('_partial/search') %>
+    <button class="back-to-top" type="button" aria-label="Back to top" title="Back to top">
+      <span aria-hidden="true">↑</span>
+    </button>
+    <script src="<%- url_for('/js/aether.js') %>" defer></script>
+  </body>
+</html>

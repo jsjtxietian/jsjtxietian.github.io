@@ -1,0 +1,30 @@
+<section class="page-shell archive-page">
+  <header class="page-heading">
+    <h1>Archive</h1>
+    <p><%= site.posts.length %> 篇关于技术、阅读与生活的记录。</p>
+  </header>
+  <div class="archive-filter">
+    <span>按标签浏览</span>
+    <%- list_tags({show_count: true, class: 'archive-tag'}) %>
+  </div>
+  <div class="archive-list">
+    <%
+      let currentYear = null;
+      site.posts.sort('date', -1).each(function(item) {
+        const year = item.date.year();
+        if (year !== currentYear) {
+          if (currentYear !== null) { %></div></section><% }
+          currentYear = year;
+    %>
+      <section class="archive-year">
+        <div class="archive-year-label"><span><%- year %></span></div>
+        <div class="archive-year-posts">
+    <% } %>
+          <article class="archive-row">
+            <time><%- item.date.format('MM.DD') %></time>
+            <h2><a href="<%- url_for(item.path) %>"><%- item.title || 'Untitled' %></a></h2>
+            <% if (item.tags && item.tags.length) { %><span><%- item.tags.first().name %></span><% } %>
+          </article>
+    <% }); if (currentYear !== null) { %></div></section><% } %>
+  </div>
+</section>

@@ -1,0 +1,14 @@
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-signature">
+      <span class="signal-dot" aria-hidden="true"></span>
+      <span>© <%= new Date().getFullYear() %> <%- config.author %></span>
+      <span class="footer-note"><%- theme.footer.note %></span>
+    </div>
+    <nav class="footer-links" aria-label="Social links">
+      <% theme.footer.links.forEach(function(item) { %>
+        <a href="<%- url_for(item.url) %>"<% if (item.url.startsWith('http')) { %> target="_blank" rel="noopener"<% } %>><%- item.name %></a>
+      <% }) %>
+    </nav>
+  </div>
+</footer>
