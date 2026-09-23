@@ -1,0 +1,28 @@
+/* Local footnote tooltips for hexo-reference's existing markup. */
+.prose [rel="footnote"] { position: relative; }
+.prose [rel="footnote"] [aria-label]::after {
+  content: attr(aria-label);
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  width: max-content;
+  max-width: min(280px, 70vw);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-solid);
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: .8rem;
+  font-weight: 400;
+  line-height: 1.6;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  transform: translateX(-50%);
+  visibility: hidden;
+  pointer-events: none;
+}
+.prose [rel="footnote"]:hover [aria-label]::after,
+.prose [rel="footnote"]:focus-visible [aria-label]::after { visibility: visible; }

@@ -14,8 +14,11 @@
   <link rel="apple-touch-icon" href="<%- url_for('/images/Sun.png') %>">
   <link rel="alternate" type="application/atom+xml" title="<%- config.title %>" href="<%- url_for('/atom.xml') %>">
   <link rel="stylesheet" href="<%- url_for('/css/aether.css') %>">
-  <% if (theme.mathjax.enable && is_post()) { %>
-    <script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]},svg:{fontCache:'global'}};</script>
-    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <% if ((page.content || '').includes('rel="footnote"')) { %>
+    <link rel="stylesheet" href="<%- url_for('/css/footnotes.css') %>">
+  <% } %>
+  <% if (theme.mathjax.enable && is_post() && needs_math(page)) { %>
+    <script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]},svg:{fontCache:'global'},startup:{elements:['.prose']}};</script>
+    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>
   <% } %>
 </head>

@@ -18,3 +18,11 @@ A quiet, reading-first Hexo theme for this blog.
 - Search, theme, TOC, copy and scroll behavior: `source/js/aether.js`
 
 The theme has no dependency on the old `oranges` theme or its stylesheets.
+
+## Article loading
+
+- `scripts/loading.js` removes the footnote plugin's remote stylesheet; footnote pages use `source/css/footnotes.css` instead.
+- MathJax loads asynchronously only when rendered article text contains math delimiters. Set `mathjax: true` or `mathjax: false` in an article's front matter to override detection.
+- Article images use asynchronous decoding. The first image loads eagerly and subsequent images load lazily. Local image dimensions are included at build time to reserve their space.
+- Place a same-sized `.webp` beside a PNG or JPEG to serve it through a `<picture>` element with the original image as fallback. Original Markdown image links remain valid. Existing hand-written `<picture>` elements are preserved.
+- After changing render filters, run `npm run clean` followed by `npm run build` to refresh cached article HTML.
