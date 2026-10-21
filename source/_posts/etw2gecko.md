@@ -1,7 +1,7 @@
 ---
 title: 从 ETW 到 Firefox Profiler 火焰图
 tags:
-  - Perf
+  - Performance
   - Vibe
 date: 2025-10-21
 ---

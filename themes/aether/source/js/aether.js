@@ -32,6 +32,39 @@
   window.addEventListener('scroll', updateScrollUI, { passive: true });
   backToTop?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
+  const root = document.documentElement;
+  const themeToggle = document.querySelector('.theme-toggle');
+  const syncThemeLabel = () => {
+    const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    themeToggle?.setAttribute('aria-label', `Switch to ${next} theme`);
+  };
+  syncThemeLabel();
+  themeToggle?.addEventListener('click', () => {
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('aether-theme', root.dataset.theme); } catch (_) {}
+    syncThemeLabel();
+  });
+  // Follow OS changes until the reader picks a theme explicitly.
+  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', (event) => {
+    let saved = null;
+    try { saved = localStorage.getItem('aether-theme'); } catch (_) {}
+    if (saved) return;
+    root.dataset.theme = event.matches ? 'dark' : 'light';
+    syncThemeLabel();
+  });
+
+  // Return to the list the reader came from (e.g. a filtered archive) instead of always going home.
+  const backLink = document.querySelector('.article-back');
+  if (backLink && document.referrer) {
+    try {
+      const from = new URL(document.referrer);
+      if (from.origin === location.origin && from.pathname !== location.pathname) {
+        backLink.href = from.href;
+        if (from.pathname.startsWith('/archives')) backLink.textContent = '← Back to archive';
+      }
+    } catch (_) {}
+  }
+
   const archivePage = document.querySelector('.archive-page');
   if (archivePage) {
     const selectedTag = new URLSearchParams(window.location.search).get('tag');
@@ -107,14 +140,31 @@
   const dialog = document.querySelector('.search-dialog');
   const searchInput = document.querySelector('#site-search-input');
   const searchResults = document.querySelector('.search-results');
+  const searchTrigger = document.querySelector('.search-trigger');
   let searchIndex = null;
+  let selectedIndex = -1;
+  let lastFocus = null;
+
+  if (/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) {
+    const shortcut = searchTrigger?.querySelector('kbd');
+    if (shortcut) shortcut.textContent = '⌘K';
+  }
 
   const escapeHTML = (value) => value.replace(/[&<>'"]/g, (char) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
   })[char]);
+  const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Split raw text on the search terms so escaping never cuts through an entity.
+  const highlight = (text, pattern) => text.split(pattern)
+    .map((part, index) => index % 2 ? `<mark>${escapeHTML(part)}</mark>` : escapeHTML(part))
+    .join('');
+
+  const isOpen = () => dialog?.classList.contains('is-open');
 
   const openSearch = async () => {
-    if (!dialog) return;
+    if (!dialog || isOpen()) return;
+    lastFocus = document.activeElement;
+    closeMenu();
     dialog.classList.add('is-open');
     dialog.setAttribute('aria-hidden', 'false');
     body.classList.add('has-dialog');
@@ -129,6 +179,8 @@
         content: entry.querySelector('content')?.textContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() || '',
         url: entry.querySelector('url')?.textContent.trim() || '#'
       }));
+      // The reader may have typed while the index was loading.
+      if (searchInput?.value) renderSearch(searchInput.value);
     } catch (_) {
       searchIndex = [];
       searchResults.innerHTML = '<div class="search-empty">Search index could not be loaded.</div>';
@@ -136,14 +188,24 @@
   };
 
   const closeSearch = () => {
-    if (!dialog) return;
+    if (!isOpen()) return;
     dialog.classList.remove('is-open');
     dialog.setAttribute('aria-hidden', 'true');
     body.classList.remove('has-dialog');
+    (lastFocus || searchTrigger)?.focus?.();
+  };
+
+  const selectResult = (index) => {
+    const items = [...searchResults.querySelectorAll('.search-result')];
+    if (!items.length) return;
+    selectedIndex = (index + items.length) % items.length;
+    items.forEach((item, i) => item.classList.toggle('is-selected', i === selectedIndex));
+    items[selectedIndex].scrollIntoView({ block: 'nearest' });
   };
 
   const renderSearch = (query) => {
     if (!searchResults || !searchIndex) return;
+    selectedIndex = -1;
     const terms = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
     if (!terms.length) {
       searchResults.innerHTML = '<div class="search-empty">Type to search across all posts.</div>';
@@ -152,12 +214,16 @@
     const matches = searchIndex.filter((item) => {
       const haystack = `${item.title} ${item.content}`.toLowerCase();
       return terms.every((term) => haystack.includes(term));
-    }).slice(0, 12);
+    });
     if (!matches.length) {
       searchResults.innerHTML = '<div class="search-empty">No matching posts. Try another phrase.</div>';
       return;
     }
-    searchResults.innerHTML = matches.map((item) => {
+    const titleHits = (item) => terms.filter((term) => item.title.toLowerCase().includes(term)).length;
+    // Stable sort keeps the index's date order within the same title relevance.
+    matches.sort((a, b) => titleHits(b) - titleHits(a));
+    const pattern = new RegExp(`(${terms.map(escapeRegExp).join('|')})`, 'gi');
+    searchResults.innerHTML = matches.slice(0, 12).map((item) => {
       const lower = item.content.toLowerCase();
       const first = terms.reduce((best, term) => {
         const index = lower.indexOf(term);
@@ -165,21 +231,44 @@
       }, -1);
       const start = Math.max(0, first - 40);
       const excerpt = item.content.slice(start, start + 150);
-      return `<a class="search-result" href="${escapeHTML(item.url)}"><strong>${escapeHTML(item.title)}</strong><p>${start ? '…' : ''}${escapeHTML(excerpt)}${excerpt.length === 150 ? '…' : ''}</p></a>`;
+      return `<a class="search-result" href="${escapeHTML(item.url)}"><strong>${highlight(item.title, pattern)}</strong><p>${start ? '…' : ''}${highlight(excerpt, pattern)}${start + 150 < item.content.length ? '…' : ''}</p></a>`;
     }).join('');
+    if (matches.length > 12) {
+      searchResults.insertAdjacentHTML('beforeend', `<div class="search-empty">还有 ${matches.length - 12} 篇匹配，试试更具体的关键词。</div>`);
+    }
   };
 
-  document.querySelector('.search-trigger')?.addEventListener('click', openSearch);
+  searchTrigger?.addEventListener('click', openSearch);
   dialog?.addEventListener('click', (event) => { if (event.target === dialog) closeSearch(); });
   searchInput?.addEventListener('input', (event) => renderSearch(event.target.value));
+  searchInput?.addEventListener('keydown', (event) => {
+    if (event.isComposing) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      selectResult(selectedIndex + (event.key === 'ArrowDown' ? 1 : -1));
+    } else if (event.key === 'Enter') {
+      const target = searchResults.querySelectorAll('.search-result')[Math.max(0, selectedIndex)];
+      if (target) window.location.href = target.href;
+    }
+  });
   document.addEventListener('keydown', (event) => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
-      openSearch();
+      if (isOpen()) closeSearch(); else openSearch();
     }
     if (event.key === 'Escape') {
       closeSearch();
       closeMenu();
+    }
+    // Keep Tab inside the open dialog.
+    if (event.key === 'Tab' && isOpen()) {
+      const focusable = [searchInput, ...searchResults.querySelectorAll('.search-result')].filter(Boolean);
+      const index = focusable.indexOf(document.activeElement);
+      const next = event.shiftKey
+        ? (index <= 0 ? focusable.length - 1 : index - 1)
+        : (index === -1 || index === focusable.length - 1 ? 0 : index + 1);
+      event.preventDefault();
+      focusable[next].focus();
     }
   });
 })();

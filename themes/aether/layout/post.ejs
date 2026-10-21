@@ -37,7 +37,7 @@
             <% page.tags.each(function(tag) { %><a href="<%- url_for('/archives/') %>?tag=<%- encodeURIComponent(tag.name) %>">#<%- tag.name %></a><% }) %>
           </div>
         <% } %>
-        <span class="meta-divider"></span>
+        <span class="meta-divider before-time"></span>
         <span class="reading-time" data-reading-time>— min read</span>
       </div>
     </header>

@@ -12,10 +12,11 @@ A quiet, reading-first Hexo theme for this blog.
 ## Where to change things
 
 - Site copy, navigation, friends and footer links: `_config.yml`
-- Color, type, spacing and component tokens: `source/css/aether.css` under `:root`
+- Color, type, spacing and component tokens: `source/css/aether.css` under `:root`; dark theme overrides under `:root[data-theme="dark"]`
 - Self-hosted Latin reading typeface: `source/fonts/`
 - Page structure: `layout/`
 - Search, theme, TOC, copy and scroll behavior: `source/js/aether.js`
+- Home-list excerpts and meta descriptions: `scripts/summary.js` (front-matter `description` wins, then `<!-- more -->`, then the opening prose)
 
 The theme has no dependency on the old `oranges` theme or its stylesheets.
 
