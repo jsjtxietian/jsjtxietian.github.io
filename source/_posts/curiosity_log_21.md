@@ -1,5 +1,5 @@
 ---
-title: Curiosity Log 201 - Raft
+title: Curiosity Log 21 - Raft
 tags:
   - Curiosity
 date: 2026-10-27
