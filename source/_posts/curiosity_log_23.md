@@ -1,5 +1,5 @@
 ---
-title: Curiosity Log 23 - Take a break
+title: Curiosity Log 23 - Neon Time
 tags:
   - Curiosity
 date: 2026-11-23
